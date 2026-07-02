@@ -19,6 +19,7 @@ than a feeling, and the trail it leaves is the onboarding a teammate could pick 
 
 | # | Stage | What it produces | What verifies it |
 |---|-------|------------------|------------------|
+| ▸ | Scout — find what to build | a Build Brief: what to build + first user | Reality Probe: a 30-min pre-code test + kill criterion |
 | 0 | Scope Gate | the one job, definition of done, not-in-v0 list | segment / one-job / kill criteria |
 | 1 | Design Doc | the canonical spec everything traces to | design review |
 | 2 | Build Prompt | the paste-ready builder prompt | cross-model cold read (or a two-build bake-off) |
@@ -28,7 +29,9 @@ than a feeling, and the trail it leaves is the onboarding a teammate could pick 
 | 5 | Acceptance Gate | the one green command that IS "done" | failure paths triggered and read as the user |
 | 6 | Own Your Code | onboarding that confers ownership | re-derive a decision cold |
 
-You can enter at any stage — each skill establishes the handshake with the stage before it.
+You can enter at any stage — each skill establishes the handshake with the stage before it. The
+`▸` front door (`/scout`) is optional: start there when you don't have an idea yet; otherwise begin
+at the Scope Gate.
 
 ## Skills
 
@@ -37,6 +40,7 @@ not built ahead.
 
 | Skill | Status |
 |-------|--------|
+| `/scout` | **Available** (v2.0) — the front door: inverted office-hours that discovers what to build from a person + their real work → a Build Brief |
 | `/own-your-code` | **Available** (v2.0) — turn an AI-built repo into an onboarding that confers ownership |
 | `/test-spec` | Forged on a real ship; migrating into this repo |
 | `/build-prompt` | Next up — turn a design doc into a hardened builder prompt |
