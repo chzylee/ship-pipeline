@@ -1,0 +1,9 @@
+{
+  "name": "ship-pipeline",
+  "displayName": "Ship Pipeline",
+  "description": "A guided build pipeline that keeps senior-engineer ownership in LLM-speed development: design doc → build prompt → build review → test spec → acceptance gate → code ownership, every stage verified and documented.",
+  "author": { "name": "Noah Lee" },
+  "homepage": "https://github.com/chzylee/ship-pipeline",
+  "repository": "https://github.com/chzylee/ship-pipeline",
+  "keywords": ["pipeline", "ownership", "build-process", "code-review", "testing", "skills"]
+}

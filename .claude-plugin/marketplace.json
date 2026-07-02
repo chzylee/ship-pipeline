@@ -1,0 +1,11 @@
+{
+  "name": "ship-pipeline",
+  "owner": { "name": "Noah Lee" },
+  "plugins": [
+    {
+      "name": "ship-pipeline",
+      "source": "./",
+      "description": "A guided build pipeline that keeps senior-engineer ownership in LLM-speed development."
+    }
+  ]
+}
