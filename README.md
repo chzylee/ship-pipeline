@@ -42,7 +42,7 @@ not built ahead.
 |-------|--------|
 | `/scout` | **Available** (v2.0) — the front door: inverted office-hours that discovers what to build from a person + their real work → a Build Brief |
 | `/own-your-code` | **Available** (v2.0) — turn an AI-built repo into an onboarding that confers ownership |
-| `/test-spec` | Forged on a real ship; migrating into this repo |
+| `/test-spec` | **Available** (v0.1.0) — dialogue-driven skill producing a Test Spec: what must be tested to trust a build |
 | `/build-prompt` | Next up — turn a design doc into a hardened builder prompt |
 | `/build-review`, `/acceptance-gate`, `/bake-off`, `/current-state` | Being harvested |
 
