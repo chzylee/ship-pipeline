@@ -1,0 +1,124 @@
+---
+name: ratify
+description: 'The ratification protocol for blocking stops in any pipeline stage: turns "OK" clicks into demonstrated judgment via prediction-before-reveal. The human states their expectation BEFORE seeing the recommendation; the gap between the two is the discussion; every decision is logged as predicted / surprised / no-opinion, producing a measurable ownership record and a blind-spot reading list. Invoked by other pipeline skills at their STOP gates, or standalone on any decision list ("ratify this spec", "ratify TEST_SPEC.md", "walk me through ratifying these", "run the ratification protocol"). Done when every judgment item has a logged outcome — not when the doc is approved.'
+---
+
+# Ratify
+
+Every dialogue-driven pipeline stage ends its phases in blocking stops so the human decides
+instead of the model. This skill is **the human side of those stops**. Phase skills define what
+the AI must produce; this one defines what the human must *do* for their yes to mean anything.
+
+The failure it exists to kill: **rubber-stamping at ratification speed.** A recommendation that
+"seems like it makes sense" gets OK'd, the details fly over the human's head, and the stop gate —
+the whole point of the dialogue — becomes theater. "AI recommends, users decide" only holds if
+deciding is an act. An approval that costs nothing proves nothing.
+
+The mechanism is teach-back, borrowed from medicine: informed consent isn't a signature, it's the
+patient restating the plan in their own words. Here, it's the human stating what they *expect*
+before the recommendation is revealed. You cannot rubber-stamp a question you had to answer first.
+
+## The decision contract — establish this before walking items
+
+Every phase that invokes this protocol has (or gets) a three-field contract. If the invoking
+skill declares these, use them; otherwise derive them and confirm in one line before starting.
+
+1. **Human function** — what must the human be able to assert, in domain language, when this
+   phase closes? (For a test spec: "I know what must be true, what we deliberately don't test,
+   and where the risk concentrates.")
+2. **Evidence format** — what artifact does the human judge? A claim in domain language, a diff,
+   a red-then-green test, a rendered output, a running trace. **Never prose reassurance.**
+3. **Pace** — chunk size and batch cap (defaults below).
+
+The AI's role derives from the contract as its complement: where the human is the oracle
+(domain knowledge, intent, taste), the AI is the **examiner** — its job is to extract and verify
+the human's judgment, not to collect approvals.
+
+## The protocol — prediction before reveal
+
+Run per item, threaded into conversation (see Chunking). The order is the mechanism —
+**never reveal the recommendation before the elicitation.**
+
+1. **Set the scene.** A short conversational preface in *domain language, not code language*:
+   the situation, why it matters, what's at stake. ("DOL publishes quarterly files
+   cumulatively — Q2 contains Q1's filings. Someone drops both into the data folder.") Give
+   everything needed to have an opinion; give nothing that telegraphs the answer.
+2. **Elicit.** Ask what the user expects or wants to happen. Open question, their words. This is
+   a conversation, not a quiz — tangents and "wait, how does X work?" are the process working,
+   not interruptions. Answer questions about the *situation* freely; hold the recommendation back.
+3. **Reveal and diff.** Show the recommendation. The delta between their stated expectation and
+   the proposal *is* the discussion. Match → confirm fast and move on; the speed is earned.
+   Divergence → work it: one of the two is wrong, and finding out which is the entire value of
+   the stop.
+4. **Ratify and grade.** Record the decision with its outcome:
+   - `predicted` — expectation matched the recommendation. A fast, legitimate yes.
+   - `surprised` — they had an expectation and the reveal contradicted it (or exposed something
+     they hadn't considered). The decision may still ratify as recommended — the grade tracks
+     *foresight*, not correctness of the final call.
+   - `no-opinion` — they couldn't form an expectation. Not a failure — a **finding**: it is the
+     precise, automatically-generated signal for what to go read.
+5. **Assign reading.** Every `surprised` and `no-opinion` gets a concrete pointer logged with it —
+   the code path, design-doc section, or data source that would have produced the opinion. The
+   blind spots assemble the reading list; nothing is read out of guilt.
+
+## Chunking — conversation threads, not an atomized quiz, not bulk approval
+
+- **Thread = one coherent risk area or component** ("employer normalization," "the manual-input
+  files"), prefaced with its scene-setting narrative. Items inside a thread flow as one
+  conversation — the preface does double duty for all of them.
+- **Mechanical items** (obviously correct, cleanly traced, no real fork) are grouped and
+  confirmed in one pass. The protocol spends its cost exactly where the human is the oracle;
+  everywhere else, compress.
+- **Batch cap:** default **~10 judgment items per sitting**, MUST-tier first while attention is
+  fresh. At the cap, offer to stop and resume — say so plainly: a stale yes is worse than a slow
+  one. Multiple sittings are the norm for a real spec, not a failure to finish.
+- **The balance rule:** the AI works in large chunks; the human engages at chunk boundaries.
+  Item-by-item atomization of the mechanical burns the human's attention before it reaches the
+  judgment calls; whole-spec-at-once is the rubber stamp. The chunk boundary — one risk area —
+  is where intentional dialogue lives.
+
+## The log — ownership made measurable
+
+Write `RATIFICATION_LOG.md` beside the ratified artifact (append per sitting; never clobber —
+the log is a record, like the spec it accompanies). Per judgment item:
+
+```
+| item | expectation stated | outcome | reading assigned |
+```
+
+Plus a summary line per sitting: **prediction accuracy over judgment items** — "9/12 predicted,
+2 surprised, 1 no-opinion." High accuracy means the fast yeses were legitimate and the human owns
+this system. Low accuracy means the green light was under-informed — and the log says exactly
+where, which is worth more than the score.
+
+**Feed-forward:** the `surprised` / `no-opinion` list is direct input to the ownership stage
+(`/own-your-code`): the surprises are the study guide. What a teammate (or the future you)
+inherits is not "approved" but *"anticipated correctly here, surprised there — read the
+surprised ones first."*
+
+## When to run full protocol vs. compress
+
+Stakes-based, by the decision contract's first field:
+
+- **Full protocol** where the human is the oracle: test-spec ratification, acceptance criteria,
+  SKIP lists, scope cuts, anything where their domain knowledge is the only source of truth.
+- **Plain confirm** where they aren't: mechanical trace-throughs, decisions the design doc
+  already made, implementation details below the contract line.
+
+This is also the concurrency rule for running many builds in parallel: the ratification stop is
+the **human serialization point** — the one place work must wait for a person. Everything else
+can parallelize; guard this bottleneck by keeping it small (judgment items only) and real
+(prediction-first), not by skipping it.
+
+## Notes
+
+- **Order is the mechanism.** Elicit before reveal, always. A reveal-first stop is a different
+  (weaker) protocol, even with the same questions.
+- **Read-only** except `RATIFICATION_LOG.md`.
+- **`no-opinion` is a finding, not a failure** — say this to the user the first time it happens.
+- **Composes, doesn't replace.** Invoked by a phase skill (e.g. `/test-spec`'s Judgment and
+  User-challenge stops), it runs inside that skill's dialogue and inherits its item
+  classification. Standalone, it can walk any decision list or re-ratify an existing doc —
+  re-ratifying a spec you OK'd too fast is a first-class use.
+- **Done = every judgment item has a logged outcome.** A ratified doc with no log means the
+  protocol didn't run.
