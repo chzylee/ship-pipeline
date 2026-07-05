@@ -19,19 +19,68 @@ than a feeling, and the trail it leaves is the onboarding a teammate could pick 
 
 | # | Stage | What it produces | What verifies it |
 |---|-------|------------------|------------------|
-| ▸ | Scout — find what to build | a Build Brief: what to build + first user | Reality Probe: a 30-min pre-code test + kill criterion |
+| ▸ | Sourcing — find what to build (methods: Scout · Sidequest) | a Build Brief + lane declaration | method-matched: Reality Probe (main lane, /scout) · black-box test + greenlight (sidequest lane, /sidequest) |
 | 0 | Scope Gate | the one job, definition of done, not-in-v0 list | segment / one-job / kill criteria |
 | 1 | Design Doc | the canonical spec everything traces to | design review |
-| 2 | Build Prompt | the paste-ready builder prompt | cross-model cold read (or a two-build bake-off) |
-| — | *the build* | AI implements | — |
+| 2 | Build Plan | shared whole-design context + ordered per-increment build prompts | anchor coverage (increments' union = the whole design) + cross-model cold read (or a two-build bake-off) |
+| — | *the build* | AI implements, one increment at a time: build → test → ratify, max one increment built-but-unverified (WIP 1) | the owner's verify act per increment, logged |
 | 3 | Build Review | code ↔ design reconciliation | fresh judge: six checks → judgment + blockers |
 | 4 | Test Spec | what must be tested, every item anchored | traces to the design doc, bounded by not-in-scope |
-| 5 | Acceptance Gate | the one green command that IS "done" | failure paths triggered and read as the user |
+| 5 | Acceptance Gate | tests built from the spec, then driven to an earned green: the one command whose passing IS "done" | leg-checklist — each MUST behavior a leg (passed, or deferred→a named step); `/finish-build` discharges the deferred `xfail(strict)` legs to green; failure paths triggered and read as the user |
 | 6 | Own Your Code | onboarding that confers ownership | re-derive a decision cold |
 
+**Gates are leg-checklists, not single events.** A gate passes leg by leg; a leg that can't pass
+now is *deferred* and must name the later step that discharges it. The Acceptance Gate's
+automated-suite leg is discharged by `/finish-build`, which drives the ratified-but-deferred
+behaviors (committed as `xfail(strict)`) to green. So **"build complete" is not "suite green"** — a
+suite can be green while MUST behaviors sit parked under `xfail`. Build complete = every MUST leg
+built-and-green *or* consciously demoted-and-logged (a demotion is a ratified decision, never a
+quiet edit), every deferred marker removed, nothing regressed. That is the exit criterion into Own
+Your Code.
+
 You can enter at any stage — each skill establishes the handshake with the stage before it. The
-`▸` front door (`/scout`) is optional: start there when you don't have an idea yet; otherwise begin
+`▸` front door is optional: `/scout` when you don't have an idea yet (main lane) · `/sidequest` to source low-ownership builds for autonomous runs (sidequest lane); otherwise begin
 at the Scope Gate.
+
+## What each run carries in-repo
+
+The pipeline's state, decisions, and provenance live in the **project's own repo**, so a cold clone
+is self-describing — no one reconstructs "where is this and how did it get here" from chat, memory,
+or a wiki. Each fact has one home and is handed forward to the stage that consumes it:
+
+| Artifact | Lives at | Source of truth for | Handed forward to |
+|----------|----------|---------------------|-------------------|
+| Position + stage map + gate legs | `docs/build_status.md` | where this project is in the pipeline | anyone cloning · `/own-your-code`'s current-state · advanced by `/finish-build` |
+| Ratified test contract | `TEST_SPEC.md` | what must be true to trust the build | `/finish-build` (its legs) · Acceptance Gate |
+| Code/build decisions (each fork + why) | `docs/decision_log.md` | why the build is the way it is | `/own-your-code` drift check · `/finish-build` logs forks here |
+| Ownership record (`predicted`/`surprised`/`no-opinion`) | `RATIFICATION_LOG.md` | demonstrated judgment + blind spots | `/own-your-code` study guide |
+| Driving prompt per step | `docs/prompts/NN-<step>.md` | provenance / retrace of each step | audit of a fast or back-filled build |
+
+**Repo owns run-state; the wiki owns the process.** The repo is the single source of truth for
+*this build* — position, decisions, provenance, ratification. The Ship Pipeline wiki is the single
+source of truth for the *generic process* — stage definitions and how-tos — and holds no project's
+position; skill maturity lives in the Skills table below, not restated on the wiki. Two homes for
+one fact is drift: retire any per-project "current state" wiki page in favor of `build_status.md`.
+
+**Changelog boundary:** the Notion Changelog records changes to the pipeline's *stage documents*;
+the repo's `decision_log.md` records decisions about the *code/build itself*.
+
+The `docs/build_status.md` skeleton — the one place "where am I" is answered:
+
+```markdown
+# Build Status — <project>
+
+Pipeline: ▸ Sourcing · 0 Scope · 1 Design · 2 Build Plan · (build) · 3 Review · 4 Test Spec · 5 Acceptance Gate · 6 Own Your Code
+Position: **5 · Acceptance Gate** (in progress)
+
+## Gate legs — 5 · Acceptance Gate
+- [x] Scenario A — human pass, <date>
+- [x] Scenario B — human pass, <date>
+- [ ] Automated-suite leg — deferred → /finish-build (N MUST behaviors parked as xfail-strict)
+
+## Log
+- <date> — advanced to <stage>: <one line>
+```
 
 ## Skills
 
@@ -42,9 +91,12 @@ not built ahead.
 |-------|--------|
 | `/scout` | **Available** (v2.0) — the front door: inverted office-hours that discovers what to build from a person + their real work → a Build Brief |
 | `/own-your-code` | **Available** (v2.0) — turn an AI-built repo into an onboarding that confers ownership |
-| `/test-spec` | **Available** (v0.1.0) — dialogue-driven skill producing a Test Spec: what must be tested to trust a build |
-| `/build-prompt` | Next up — turn a design doc into a hardened builder prompt |
-| `/build-review`, `/acceptance-gate`, `/bake-off`, `/current-state` | Being harvested |
+| `/test-spec` | **Available** (v0.2.0) — dialogue-driven skill producing a Test Spec: what must be tested to trust a build; ratifies via `/ratify` |
+| `/ratify` | **Available** (v0.1.0) — cross-stage ratification protocol: prediction-before-reveal at blocking stops, logging `predicted`/`surprised`/`no-opinion` into a measurable ownership record + blind-spot reading list |
+| `/finish-build` | **Available** (v0.1.0) — the execution-stage driver **for the Acceptance Gate**: drives committed-failing (`xfail`-strict) tests to green through a predict-then-reveal loop, escalating design forks to `/ratify`, until the gate's one green command actually passes. Supersedes the `/acceptance-gate` harvest candidate |
+| `/sidequest` | **Experimental** (v0.1.0) — the ▸ stage's autonomous second method: mines friction, screens with the black-box test (low ownership requirement, not low maintenance), emits launch-ready autonomous build briefs into the Sidequest Projects stockpile. Drafted ahead of first proven run; graduates on the first sourced-and-shipped sidequest |
+| `/build-plan` | Next up — turn a design doc into a Build Plan: shared context + ordered per-increment build prompts sized to the owner's verification bandwidth |
+| `/build-review`, `/bake-off`, `/current-state` | Being harvested (`/acceptance-gate` superseded by `/finish-build`) |
 
 ## Install
 
