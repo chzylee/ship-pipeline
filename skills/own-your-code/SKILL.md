@@ -66,7 +66,7 @@ those terms.) Use the lens three ways:
 
 ## When to run
 On demand, and again after any code change. **Disposable — regenerate, never hand-maintain.**
-(Regeneration refreshes the "current state" block and keeps multiple output targets from drifting.)
+(Regeneration overwrites the single wiki doc in place, refreshing its "current state" block.)
 
 ## Output format — the cognitive-load contract
 High-volume ownership, delivered compact. Structure over prose:
@@ -88,19 +88,21 @@ High-volume ownership, delivered compact. Structure over prose:
   that *look* like real jargon but aren't (a reader who googles them gets nothing) — replace them
   with a plain description plus the file/symbol they refer to.
 
-## Output targets — two targets, two disciplines
-- **Repo file (default) — always-current, overwrite-on-regenerate:** `OWN_YOUR_CODE.md` at repo
-  root. Disposable: the file is always *the* latest read.
-- **Notion (a versioned run archive, one sub-page per *run*, never overwritten — done whenever the
-  repo declares a wiki handle):** resolve the project's wiki from **`docs/notion.json`** (`wiki_url`)
-  at the target repo root — the repo's committed pointer to its Notion wiki; if absent, search Notion
-  by project name, and on a miss ask the owner to add `docs/notion.json` rather than guessing a
-  destination. Under that wiki (its `Project Ownership` area, or the wiki root), create a new sub-page
-  per run titled
-  `{Project} — v{skill-version} · {YYYY-MM-DD HHh}` (skill version from the repo's `VERSION` file).
-  This lets you retrace which skill version produced which read, while the newest sub-page is the
-  freshest. **Local file = read-freshest; Notion = version history.** Optionally a Decisions
-  database so `OWNED`/`REVISIT` + the maint/UX/cost tags roll up across projects.
+## Output target — the project wiki, single source
+The **Notion project wiki is the home of every pipeline deliverable** — one copy, not a repo file
+plus a wiki archive. own-your-code writes there and **does not write a local `OWN_YOUR_CODE.md`**
+(a repo copy would only drift from the wiki source).
+- **Resolve the wiki** from **`docs/notion.json`** (`wiki_url`) at the target repo root — the repo's
+  committed pointer to its Notion wiki; if absent, search Notion by project name, and on a miss ask
+  the owner to add `docs/notion.json` rather than guessing a destination. No Notion access this run
+  (headless/cron)? Emit the doc content and say where it belongs — never silently fall back to a repo file.
+- **One living, top-level doc, regenerated in place.** own-your-code is *the current ownership of the
+  whole project* — disposable, always-current, one meaningful read — so it is a **single page directly
+  under the project's wiki page** (a project-level deliverable, NOT one per build version), titled
+  `Own Your Code — {Project}`, **overwritten on each regenerate**. Do not stack per-run archive pages;
+  version history is the Notion page's own history. Leave a pointer to it from a build's deliverable
+  ladder if that build wants the ownership capstone in view. Optionally a Decisions database so
+  `OWNED`/`REVISIT` + the maint/UX/cost tags roll up across projects.
 - **Stamp every output** — put `own-your-code v{VERSION} · {YYYY-MM-DD}` in the generated header, so
   a doc always declares which skill version produced it.
 
