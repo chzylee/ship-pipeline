@@ -91,8 +91,12 @@ High-volume ownership, delivered compact. Structure over prose:
 ## Output targets — two targets, two disciplines
 - **Repo file (default) — always-current, overwrite-on-regenerate:** `OWN_YOUR_CODE.md` at repo
   root. Disposable: the file is always *the* latest read.
-- **Notion (optional) — a versioned run archive, one sub-page per *run*, never overwritten:** under
-  a `Project Ownership` parent, create a new sub-page per run titled
+- **Notion (a versioned run archive, one sub-page per *run*, never overwritten — done whenever the
+  repo declares a wiki handle):** resolve the project's wiki from **`docs/notion.json`** (`wiki_url`)
+  at the target repo root — the repo's committed pointer to its Notion wiki; if absent, search Notion
+  by project name, and on a miss ask the owner to add `docs/notion.json` rather than guessing a
+  destination. Under that wiki (its `Project Ownership` area, or the wiki root), create a new sub-page
+  per run titled
   `{Project} — v{skill-version} · {YYYY-MM-DD HHh}` (skill version from the repo's `VERSION` file).
   This lets you retrace which skill version produced which read, while the newest sub-page is the
   freshest. **Local file = read-freshest; Notion = version history.** Optionally a Decisions
