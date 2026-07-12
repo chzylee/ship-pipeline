@@ -1,6 +1,6 @@
 ---
 name: test-spec
-description: 'Produce the agreed-upon Test Spec: a document of what must be tested to trust that a build executes its design properly — the verification-side dual of the design doc. Enumerates the must-be-true behaviors (each traced to a design requirement or code symbol), the invariants worth property-testing, and the failure modes / edge cases triaged by risk (must / should / deliberately-skipped), then names the verification method per item and the end-to-end acceptance scenario that is the ship gate. Works by dialogue: a senior test/QA-lead persona proposes candidates and walks you through them one at a time with blocking stops, so you ratify exactly what gets greenlit instead of trusting a green light. Produces the spec, NEVER the tests — a separate build step writes them. Triggers on "draft a test spec for X", "what should we test for X", "test plan for X", "spec the tests for X", "what must be tested here", or when starting the testing/QA step of a build. Done when the doc is ratified; the spec is a living artifact — amend it, do not clobber it.'
+description: 'Produce the agreed-upon Test Spec: a document of what must be tested to trust that a build executes its design properly — the verification-side dual of the design doc. Enumerates the must-be-true behaviors (each traced to a design requirement — or to a code symbol, which marks it a trust-neutral regression pin), the invariants worth property-testing, and the failure modes / edge cases triaged by risk (must / should / deliberately-skipped), then names the verification method per item and the end-to-end acceptance scenario that is the ship gate. Works by dialogue: a senior test/QA-lead persona proposes candidates and walks you through them one at a time with blocking stops, so you ratify exactly what gets greenlit instead of trusting a green light. Produces the spec, NEVER the tests — a separate build step writes them. Runs at two scopes: a slice (one increment, feature, or subsystem — the default during a build, seams included) or a sweep (version-level gap sweep after the last increment); both amend the same living TEST_SPEC.md. Triggers on "draft a test spec for X", "what should we test for X", "test plan for X", "spec the tests for X", "test spec for the X I just built/rebuilt", "what must be tested here", or when starting the testing/QA step of a build. Done when the doc is ratified; the spec is a living artifact — amend it, do not clobber it.'
 ---
 
 # Test Spec
@@ -40,6 +40,25 @@ buildable or built artifact — before or alongside test-building. It is **step 
 Testing & Validation** step of the pipeline: it consumes the design doc and produces the spec that
 drives everything downstream (behavioral tests, property tests, manual QA, regression gates).
 
+## Scope of a run — slice or sweep
+The skill runs at two scopes; the invocation says which ("test spec for the data-pipeline rebuild"
+is a slice; "test spec for v1" is a sweep). A slice is **not** the weaker form — the version-sized
+sweep is what floods ratification and starves prediction; the strong configuration is slices
+during the build plus one small sweep at the end.
+- **Slice (default during a build)** — one increment, feature, or subsystem, specced right after
+  it's built. Read only the design anchors that chunk delivers; propose only items the chunk owns.
+  Declare the boundary in the spec ("this slice covers X; Y is out of slice, owed to the sweep").
+  **Seams are in scope:** a changed component's risk concentrates at its interfaces — the contract
+  with its consumers, and the existing behaviors downstream depends on, belong to the slice, not
+  the sweep. For a **rebuild**, prior behavior is a design anchor: "the rebuilt X still does Y"
+  items are design-anchored (the design required Y all along); existing spec items covering the
+  component are re-affirmed or amended in place, never duplicated.
+- **Sweep (version-level, once per version)** — the gap sweep after the last increment:
+  cross-increment integration, unstated invariants, the acceptance scenario. With slices done
+  during the build the sweep should be small; a big sweep is the signal that slices were skipped.
+- Both scopes **amend the same living `TEST_SPEC.md`** — a slice adds or updates its section and
+  its rows in the must-test index; it never clobbers the file.
+
 ## Scope — hold this line
 - **Owns:** the *specification* of what to test — behaviors, invariants, failure modes, the
   triage of what's worth it, the verification method per item, the acceptance gate.
@@ -64,7 +83,9 @@ make the green light mean something.
 5. **Not everything deserves a test.** Fringe × low-blast × high-cost is a *log*, not a test. Name
    what you're skipping, out loud — the skip list is part of the work.
 6. **Trace or don't trust.** Every test item comes from a design requirement or a code symbol. If
-   it comes from neither, it's invented — flag it.
+   it comes from neither, it's invented — flag it. And the anchor sets the trust class: only a
+   design-anchored test can honestly fail. A test derived from reading the built code passes by
+   construction — it asserts what the code does, not what it should do.
 7. **Assume a shared blind spot.** If the builder (human or AI) didn't think to test a case, they
    likely didn't handle it in the code either. The untested edge and the unhandled edge are the same edge.
 8. **Cheapest signal that catches the fault.** Prefer the assertion/property/manual check that
@@ -96,6 +117,17 @@ candidate as you surface it:
 - **User-challenge** — anything about *scope of trust*: every `SKIP`, every "we won't cover this,"
   every case where cutting it could bite. **Never auto-decide.** Always ask.
 
+**Judgment and User-challenge items run the `/ratify` protocol — prediction before reveal.**
+For each: set the scene in domain language (no recommendation shown), elicit the user's
+expectation *first*, then reveal the recommendation and discuss the diff. Log every outcome
+(`predicted` / `surprised` / `no-opinion`) to `RATIFICATION_LOG.md` beside the spec;
+`surprised` and `no-opinion` items each get a concrete reading pointer (code path or design §).
+Thread items by risk area — one scene-setting preface per area, conversation inside it — and cap
+at ~10 judgment items per sitting, MUST-tier first; offer to stop and resume rather than let
+yeses go stale. The log's prediction accuracy is the measure of whether ratification was real;
+its surprises feed `/own-your-code` as the study guide. Invoke `/ratify` for the full
+protocol — the rules above are the operative summary; the skill is the canonical spec.
+
 Each phase ends in a **STOP** until the user responds. The skill is **done when the user has
 ratified the spec** — not when a draft exists. If the user is thinking out loud, keep interrogating;
 diligence here is the whole point.
@@ -106,6 +138,24 @@ item with no traceable source is tagged `[un-anchored — invented, confirm inte
 Judgment question, never silently kept. This kills the class where the model invents a requirement
 the design never asked for. (If confidence in a behavior is reconstructed rather than stated, say so
 — never present an inferred "must" as a confirmed one.)
+
+**The anchor class sets the trust class — label every item.**
+- **`design-anchored` (trust-bearing).** Traces to a design requirement or increment claim. These
+  are the only items that can *honestly* fail — the intended-red discovery tests targeting
+  non-obvious edge cases, invariants, and failure modes. The spec must instruct the test-builder
+  to author these **blind to the implementation**: a fresh session given the design doc + this
+  spec, never the diff or the code. When the same context writes the code and the tests, the
+  builder's blind spot and the test author's blind spot are the same blind spot — the edge case
+  the code missed is the edge case the test won't check, and red-green becomes theater.
+- **`code-anchored` (trust-neutral).** Traces to a code symbol with no independent design
+  requirement. Legitimate as a **regression pin** on behavior already verified some other way (a
+  ratified verify act, a confirmed fix) — born green, valuable for maintenance, but it carries no
+  trust and never counts toward the red-green ritual. A code-anchored item is also never a
+  substitute for a missing design anchor — that gap is a Judgment question ("should the design
+  have required this?"), not a pin.
+- **A bug found during a verify act flips class:** it becomes a design-anchored MUST (the design
+  implicitly required it not to break), and its regression test is specified **red-first — written
+  and seen failing before the fix.**
 
 ## Step 1 — Read to spec, not to test
 - **Design doc (primary):** enumerate intended behaviors, guarantees, user journeys, stated
@@ -125,8 +175,8 @@ the design never asked for. (If confidence in a behavior is reconstructed rather
 ### 1. Orientation — one screen
 - **Under test + design reference** (link the design doc / office-hours output).
 - **Acceptance statement:** one sentence — "trusted to ship when …".
-- **Must-test index:** compact table — `# | behavior | traces to | method | tier`. Navigation +
-  the roll-up; detail lives below.
+- **Must-test index:** compact table — `# | behavior | traces to | anchor class | method | tier`.
+  Navigation + the roll-up; detail lives below.
 - **Where the risk concentrates:** the 2-4 highest blast-radius areas.
 
 ### 2. What "correct" means — behaviors traced to design
@@ -151,6 +201,19 @@ Per item: `unit` / `property` / `manual-QA` / `mutation-check`, and **automated 
 **human-in-the-loop manual pass** and the **real user test case** explicitly — humans use things, so a
 human stays in the loop. This is the bridge from spec to the build step.
 
+**Carry the authorship contract downstream.** State in the plan which items are design-anchored and
+therefore must be built by an author **blind to the implementation** (fresh session: design doc +
+this spec only), and which are code-anchored pins that may read the code. Write it into the spec so
+the test-build step can't lose it.
+
+**UI-heavy builds — verify at the right layer.** Don't force automated assertions onto the surface.
+Surface behavior (rendering, layout, interaction feel) is specced as `manual-QA` with the owner's
+verify act named — predict-then-run · break-it-on-purpose · change-one-thing, logged in the
+ratification log; that log is what carries trust for the untested surface. The logic beneath (state
+transitions, data transforms, validation, boundary conditions) is where the automated,
+design-anchored tests go — the non-obvious edge cases live there, not in the pixels. If the logic
+isn't separable enough to test, that's a finding for the spec, not a reason to skip.
+
 ### 7. Acceptance scenario(s) — the ship gate
 The concrete **end-to-end run(s)** that, green *and* manually confirmed, mean production-ready. The
 acceptance statement from §1 made executable: the exact journey, inputs, and observable outcome that
@@ -171,12 +234,25 @@ do not auto-add them;** surface each as a Judgment/User-challenge decision. Keep
 surfaces *candidates*, the human ratifies. (Tier down for a quick throwaway spec; default-on for a spec
 you'll actually build tests from.)
 
-## Output targets — a living doc, not disposable
-- **Repo file (default):** `TEST_SPEC.md` at repo root. **Unlike a disposable read, this is a living
-  agreed artifact** — amend it as the design and behaviors evolve; do not blindly clobber it. Keep it
-  in version control: the diff *is* the record of what changed about what-must-be-true.
-- **Notion (optional):** archive under the **Testing & Validation** space (the pipeline sub-page), one
-  entry per significant revision if you want the history there too.
+## Output target — one canonical home (single source of truth)
+The spec has **exactly one source of truth: `TEST_SPEC.md` at the repo root**, in version control.
+This is a **correctness rule, not a preference**, and it is non-negotiable: the tests are built
+*from* this file, in the repo, and must be reproducible from a cold clone with no Notion access —
+the same self-contained principle the Build Plan holds. Spec and tests share one home and one
+history, so they cannot drift, and no downstream step (test-build, Acceptance Gate, `/finish-build`,
+`own-your-code`) can ever read a stale copy. So the handoff is deterministic: *"specced, now build"*
+means the builder reads exactly `<repo>/TEST_SPEC.md` — one path, one truth.
+- **Living, single file — never a pile.** It is a living agreed artifact: each **slice amends its
+  own section and its rows in the must-test index**; the sweep folds in the gaps. Never clobber,
+  never fork a second spec file. As serial features land, the file *grows into* the version's whole
+  verification contract; the index table at the top is how it stays navigable. One growing file is
+  the design, not a problem to escape.
+- **Notion is a pointer, never a second canonical.** If a version wants a teammate-readable snapshot
+  in the wiki (the **Testing & Validation** space), publish it as a **derived, dated snapshot that
+  names `<repo>/TEST_SPEC.md` as the source of truth** — the same repo-owns-run-state / wiki-points
+  pattern as `build_status.md` → its Current State page. An *editable* Notion copy is the exact thing
+  that makes a skill grab the wrong file; do not create one. (Same family as the other repo-owned
+  run-state artifacts: `decision_log.md`, `RATIFICATION_LOG.md`, `build_status.md`.)
 - **Stamp every output:** `test-spec v{VERSION} · {YYYY-MM-DD}` in the header, so the spec declares
   which skill version shaped it.
 
