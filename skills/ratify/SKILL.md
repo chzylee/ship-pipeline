@@ -1,6 +1,6 @@
 ---
 name: ratify
-description: 'The ratification protocol for blocking stops in any pipeline stage: turns "OK" clicks into demonstrated judgment via prediction-before-reveal. The human states their expectation BEFORE seeing the recommendation; the gap between the two is the discussion; every decision is logged as predicted / surprised / no-opinion, producing a measurable ownership record and a blind-spot reading list. Invoked by other pipeline skills at their STOP gates, or standalone on any decision list ("ratify this spec", "ratify TEST_SPEC.md", "walk me through ratifying these", "run the ratification protocol"). Done when every judgment item has a logged outcome — not when the doc is approved.'
+description: 'The ratification protocol for blocking stops in any pipeline stage: turns "OK" clicks into demonstrated judgment via prediction-before-reveal. The human states their expectation BEFORE seeing the recommendation; the gap between the two is the discussion; every decision is logged as predicted / surprised / no-opinion, producing a measurable ownership record and a blind-spot reading list — plus a sanitized, append-only telemetry corpus that compounds across builds into presentable proof. Invoked by other pipeline skills at their STOP gates, or standalone on any decision list ("ratify this spec", "ratify TEST_SPEC.md", "walk me through ratifying these", "run the ratification protocol"). Done when every judgment item has a logged outcome — not when the doc is approved.'
 ---
 
 # Ratify
@@ -46,17 +46,25 @@ Run per item, threaded into conversation (see Chunking). The order is the mechan
 2. **Elicit.** Ask what the user expects or wants to happen. Open question, their words. This is
    a conversation, not a quiz — tangents and "wait, how does X work?" are the process working,
    not interruptions. Answer questions about the *situation* freely; hold the recommendation back.
+   Before revealing, get a one-word confidence read on their stated expectation — **low / med /
+   high**. This is `pre_confidence`: captured pre-reveal so it measures foresight honestly, and it
+   pairs with the outcome to show calibration. Keep it light — one word, not a discussion.
 3. **Reveal and diff.** Show the recommendation. The delta between their stated expectation and
    the proposal *is* the discussion. Match → confirm fast and move on; the speed is earned.
    Divergence → work it: one of the two is wrong, and finding out which is the entire value of
    the stop.
-4. **Ratify and grade.** Record the decision with its outcome:
-   - `predicted` — expectation matched the recommendation. A fast, legitimate yes.
-   - `surprised` — they had an expectation and the reveal contradicted it (or exposed something
-     they hadn't considered). The decision may still ratify as recommended — the grade tracks
-     *foresight*, not correctness of the final call.
-   - `no-opinion` — they couldn't form an expectation. Not a failure — a **finding**: it is the
-     precise, automatically-generated signal for what to go read.
+4. **Ratify, decide, and grade.** Record three things for the item:
+   - **`decision_type`** — what they decided to *do* with the recommendation: `build` (accept as
+     is), `amend` (accept with changes), `demote` (drop or defer it). `amend` and `demote` are
+     active authorship — the record of where the human steered the design rather than approving it.
+   - **`prediction_outcome`** — the foresight grade on their pre-reveal expectation:
+     - `predicted` — expectation matched the recommendation. A fast, legitimate yes.
+     - `surprised` — they had an expectation and the reveal contradicted it (or exposed something
+       they hadn't considered). The decision may still ratify as recommended — the grade tracks
+       *foresight*, not correctness of the final call.
+     - `no-opinion` — they couldn't form an expectation. Not a failure — a **finding**: it is the
+       precise, automatically-generated signal for what to go read.
+   - **`pre_confidence`** — the `low` / `med` / `high` they gave before the reveal (step 2).
 5. **Assign reading.** Every `surprised` and `no-opinion` gets a concrete pointer logged with it —
    the code path, design-doc section, or data source that would have produced the opinion. The
    blind spots assemble the reading list; nothing is read out of guilt.
@@ -96,6 +104,41 @@ where, which is worth more than the score.
 inherits is not "approved" but *"anticipated correctly here, surprised there — read the
 surprised ones first."*
 
+## The machine corpus — data that compounds
+
+The `RATIFICATION_LOG.md` is the human record of one build. Alongside it, append **one JSON line
+per judgment item** to the Ship Pipeline telemetry corpus — the machine record across *every*
+build. This is what turns scattered per-project logs into one presentable body of evidence that
+owned code is being produced at agentic speed. Full spec:
+[`docs/telemetry/README.md`](../../docs/telemetry/README.md).
+
+**Where:** `~/.claude/ship-pipeline/sends.jsonl` — resolve `$HOME` at runtime (never hardcode an
+absolute path; honor `$SHIP_PIPELINE_DATA_DIR` if set). Plugin-owned, user-global, append-only,
+**never committed to a project repo**. Create the directory if absent.
+
+**One record per judgment item** (schema v1):
+
+```json
+{"schema_version":1,"source_skill":"ratify","timestamp":"<ISO-8601 UTC>","project":"<name>","development_stage":"<stage>","pre_confidence":"low|med|high","prediction_outcome":"predicted|surprised|no-opinion","decision_type":"build|demote|amend"}
+```
+
+- `development_stage` — the invoking context: `test-spec` · `finish-build` · `acceptance-gate` ·
+  `build-loop` · `standalone` (standalone when `/ratify` is run directly on a doc). When a phase
+  skill invokes this protocol, it names the stage; standalone runs log `standalone`.
+- **No free text ever.** The item label and the assigned reading live only in
+  `RATIFICATION_LOG.md`. The corpus carries enums and scalars, so it is presentation-safe by
+  construction — showable on a screen without leaking a build.
+
+**The sensitivity call** — once per sitting, before appending: is the project's *identity*
+something the user would rather not have in a shareable corpus? Default logs the real `project`
+name; if yes, log a stable alias (`proj-<short-hash>`) instead. The measurements still aggregate —
+only the name is withheld. Because a record structurally holds no free text, this is the only
+redaction decision, and it is coarse and fast — ask it once, not per item.
+
+**Append-only.** One line per item, never rewrite a past line. Re-ratifying a doc appends fresh
+records (a new sitting); it does not edit old ones — the corpus is a history, like the human log
+it mirrors.
+
 ## When to run full protocol vs. compress
 
 Stakes-based, by the decision contract's first field:
@@ -114,7 +157,8 @@ can parallelize; guard this bottleneck by keeping it small (judgment items only)
 
 - **Order is the mechanism.** Elicit before reveal, always. A reveal-first stop is a different
   (weaker) protocol, even with the same questions.
-- **Read-only** except `RATIFICATION_LOG.md`.
+- **Read-only** except `RATIFICATION_LOG.md` and the append-only telemetry corpus
+  (`~/.claude/ship-pipeline/sends.jsonl` — see [The machine corpus](#the-machine-corpus--data-that-compounds)).
 - **`no-opinion` is a finding, not a failure** — say this to the user the first time it happens.
 - **Composes, doesn't replace.** Invoked by a phase skill (e.g. `/test-spec`'s Judgment and
   User-challenge stops), it runs inside that skill's dialogue and inherits its item

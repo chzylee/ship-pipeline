@@ -18,6 +18,11 @@ What that buys:
 - **Ownership as a measurement** — `RATIFICATION_LOG.md` records prediction accuracy per
   sitting. "9/12 predicted" is evidence the fast yeses were legitimate; the surprises feed
   `/own-your-code` as the study guide.
+- **Data that compounds** — alongside the human log, each item appends one sanitized JSON line
+  (`pre_confidence` · `prediction_outcome` · `decision_type`) to a plugin-owned, user-global
+  corpus at `~/.claude/ship-pipeline/sends.jsonl`. Across builds it aggregates into presentable
+  proof — calibration, authorship rate, blind-spot-to-mastery trend. Spec:
+  [`docs/telemetry/README.md`](../../docs/telemetry/README.md).
 
 ## Use
 
