@@ -19,15 +19,14 @@ than a feeling, and the trail it leaves is the onboarding a teammate could pick 
 
 | # | Stage | What it produces | What verifies it |
 |---|-------|------------------|------------------|
-| ▸ | Sourcing — find what to build (methods: Scout · Sidequest) | a Build Brief + lane declaration | method-matched: Reality Probe (main lane, /scout) · black-box test + greenlight (sidequest lane, /sidequest) |
-| 0 | Scope Gate | the one job, definition of done, not-in-v0 list | segment / one-job / kill criteria |
+| 0 | Sourcing & Scope Gate — find what to build, harden it (methods: Scout · Sidequest · office-hours) | a Build Brief + lane declaration, hardened into the one job / definition of done / not-in-v0 list | method-matched: Reality Probe (main lane) · black-box test + greenlight (sidequest lane); the segment / one-job / kill checklist |
 | 1 | Design Doc | the canonical spec everything traces to | design review |
-| 2 | Build Plan | shared whole-design context + ordered per-increment build prompts | anchor coverage (increments' union = the whole design) + cross-model cold read (or a two-build bake-off) |
-| — | *the build* | AI implements, one increment at a time: build → test → ratify, max one increment built-but-unverified (WIP 1) | the owner's verify act per increment, logged |
-| 3 | Build Review | code ↔ design reconciliation | fresh judge: six checks → judgment + blockers |
-| 4 | Test Spec | what must be tested, every item anchored | traces to the design doc, bounded by not-in-scope |
-| 5 | Acceptance Gate | tests built from the spec, then driven to an earned green: the one command whose passing IS "done" | leg-checklist — each MUST behavior a leg (passed, or deferred→a named step); `/finish-build` discharges the deferred `xfail(strict)` legs to green; failure paths triggered and read as the user |
-| 6 | Own Your Code | onboarding that confers ownership | re-derive a decision cold |
+| 2 | Build Plan | shared whole-design context + ordered per-increment build prompts, sized to the owner's prediction span | anchor coverage (increments' union = the whole design) + cross-model cold read (or a two-build bake-off) |
+| 3 | ⟳ Build Loop | the code, one increment at a time: build → `/test-spec` slice → tests made real (reds = decisions still owed) → `/finish-build` drives reds green → ratify gate → commit; WIP 1 | per increment: slice tests green + the owner's verify act (predict-then-run · break-it-on-purpose · change-one-thing), logged |
+| 4 | Build Review | code ↔ design reconciliation of the assembled whole | fresh judge: six checks → judgment + blockers |
+| 5 | Test Sweep | version-level Test Spec: the seams between increments, the end-to-end scenario, the gap audit vs. the whole design; unmet MUSTs parked `xfail(strict)` | every item anchored to the design, bounded by not-in-scope |
+| 6 | Acceptance Gate | the verdict that the build is DONE: the one command green on a clean checkout | leg-checklist administered by `/acceptance-gate` — `/finish-build` discharges parked `xfail` legs; failure paths, documented path, the owner's evidence-read, the human legs |
+| 7 | Own Your Code | onboarding that confers ownership | re-derive a decision cold |
 
 **Gates are leg-checklists, not single events.** A gate passes leg by leg; a leg that can't pass
 now is *deferred* and must name the later step that discharges it. The Acceptance Gate's
@@ -39,8 +38,9 @@ quiet edit), every deferred marker removed, nothing regressed. That is the exit 
 Your Code.
 
 You can enter at any stage — each skill establishes the handshake with the stage before it. The
-`▸` front door is optional: `/scout` when you don't have an idea yet (main lane) · `/sidequest` to source low-ownership builds for autonomous runs (sidequest lane); otherwise begin
-at the Scope Gate.
+sourcing methods are optional front doors within stage 0: `/scout` when you don't have an idea yet
+(main lane) · `/sidequest` to source low-ownership builds for autonomous runs (sidequest lane);
+with an idea already in hand, begin at the Scope Gate half of stage 0.
 
 ## What each run carries in-repo
 
@@ -70,10 +70,10 @@ The `docs/build_status.md` skeleton — the one place "where am I" is answered:
 ```markdown
 # Build Status — <project>
 
-Pipeline: ▸ Sourcing · 0 Scope · 1 Design · 2 Build Plan · (build) · 3 Review · 4 Test Spec · 5 Acceptance Gate · 6 Own Your Code
-Position: **5 · Acceptance Gate** (in progress)
+Pipeline: 0 Sourcing & Scope · 1 Design · 2 Build Plan · 3 ⟳ Build Loop · 4 Review · 5 Test Sweep · 6 Acceptance Gate · 7 Own Your Code
+Position: **6 · Acceptance Gate** (in progress)
 
-## Gate legs — 5 · Acceptance Gate
+## Gate legs — 6 · Acceptance Gate
 - [x] Scenario A — human pass, <date>
 - [x] Scenario B — human pass, <date>
 - [ ] Automated-suite leg — deferred → /finish-build (N MUST behaviors parked as xfail-strict)
@@ -90,13 +90,14 @@ not built ahead.
 | Skill | Status |
 |-------|--------|
 | `/scout` | **Available** (v2.0) — the front door: inverted office-hours that discovers what to build from a person + their real work → a Build Brief |
-| `/own-your-code` | **Available** (v2.0) — turn an AI-built repo into an onboarding that confers ownership |
-| `/test-spec` | **Available** (v0.2.0) — dialogue-driven skill producing a Test Spec: what must be tested to trust a build; ratifies via `/ratify` |
+| `/own-your-code` | **Available** (v2.1.0) — turn an AI-built repo into an onboarding that confers ownership |
+| `/test-spec` | **Available** (v0.5.0) — dialogue-driven skill producing a Test Spec: what must be tested to trust a build; slice mode per increment, sweep mode per version; ratifies via `/ratify` |
 | `/ratify` | **Available** (v0.1.0) — cross-stage ratification protocol: prediction-before-reveal at blocking stops, logging `predicted`/`surprised`/`no-opinion` into a measurable ownership record + blind-spot reading list |
-| `/finish-build` | **Available** (v0.1.0) — the execution-stage driver **for the Acceptance Gate**: drives committed-failing (`xfail`-strict) tests to green through a predict-then-reveal loop, escalating design forks to `/ratify`, until the gate's one green command actually passes. Supersedes the `/acceptance-gate` harvest candidate |
+| `/finish-build` | **Available** (v0.1.0) — the execution-stage **driver**: drives committed-failing (`xfail`-strict) tests to green through a predict-then-reveal loop, escalating design forks to `/ratify` — in-loop for an increment's reds, canonically for the sweep's parked legs |
+| `/acceptance-gate` | **Available** (v0.1.0) — the **criterion** to `/finish-build`'s driver: administers the gate that decides DONE — runs the mechanical legs (clean-checkout command, failure paths, documented path), presents the evidence and human legs as blocking stops, records the verdict. Never fixes code; never passes a human leg on the human's behalf |
 | `/sidequest` | **Experimental** (v0.1.0) — the ▸ stage's autonomous second method: mines friction, screens with the black-box test (low ownership requirement, not low maintenance), emits launch-ready autonomous build briefs into the Sidequest Projects stockpile. Drafted ahead of first proven run; graduates on the first sourced-and-shipped sidequest |
 | `/build-plan` | Next up — turn a design doc into a Build Plan: shared context + ordered per-increment build prompts sized to the owner's verification bandwidth |
-| `/build-review`, `/bake-off`, `/current-state` | Being harvested (`/acceptance-gate` superseded by `/finish-build`) |
+| `/build-review`, `/bake-off`, `/current-state` | Being harvested |
 
 ## Install
 
