@@ -99,6 +99,40 @@ not built ahead.
 | `/build-plan` | Next up — turn a design doc into a Build Plan: shared context + ordered per-increment build prompts sized to the owner's verification bandwidth |
 | `/build-review`, `/bake-off`, `/current-state` | Being harvested |
 
+## The public page — `/record`
+
+A self-contained static page that presents what `/ratify` is and the ownership data behind it, as a
+shareable explainer. Plain HTML — no build step, no dependencies, no JavaScript framework — served
+from the repo root by GitHub Pages (light + dark, responsive).
+
+**What it is.** It leads with what `/ratify` does and why it matters (evaluating an AI's output vs.
+merely accepting it), then shows the evidence: the telemetry corpus
+(`~/.claude/ship-pipeline/sends.jsonl`) aggregated across five delegated deliverables — most of them
+*not* code — with the calibration read, the gap-nature finding, the code case (the first build it
+ran on), and two worked moments. Numbers are recomputed from the raw corpus, never stored derived;
+the page fetches nothing at runtime.
+**Served at** https://chzylee.github.io/ship-pipeline/record/ · source: [`record/index.html`](record/index.html)
+
+### Viewing it locally
+
+Static, so any file server over the repo root works:
+
+```bash
+# from the repo root
+python -m http.server 8000
+# then open http://localhost:8000/record/ in a browser
+```
+
+Opening `record/index.html` directly via `file://` also works for a quick look.
+
+For hot reload while editing `record/index.html` or `record/styles.css`:
+
+```bash
+# from the repo root
+npx live-server --port=8000
+# then open http://localhost:8000/record/ in a browser — edits auto-reload
+```
+
 ## Install
 
 Two ways to install. The **default gives skills their bare names** (`/own-your-code`) —

@@ -1,6 +1,6 @@
 ---
 name: ratify
-description: 'The ratification protocol for blocking stops in any pipeline stage: turns "OK" clicks into demonstrated judgment via prediction-before-reveal. The human states their expectation BEFORE seeing the recommendation; the gap between the two is the discussion; every decision is logged as predicted / surprised / no-opinion, producing a measurable ownership record and a blind-spot reading list — plus a sanitized, append-only telemetry corpus that compounds across builds into presentable proof. Invoked by other pipeline skills at their STOP gates, or standalone on any decision list ("ratify this spec", "ratify TEST_SPEC.md", "walk me through ratifying these", "run the ratification protocol"). Done when every judgment item has a logged outcome — not when the doc is approved.'
+description: 'The ratification protocol for blocking stops in any pipeline stage: turns "OK" clicks into demonstrated judgment via prediction-before-reveal. The human states their expectation BEFORE seeing the recommendation; the gap between the two is the discussion; every decision is logged as predicted / surprised / no-opinion — with who authored it and what kind of gap it exposed — producing a measurable ownership record and a blind-spot reading list — plus a sanitized, append-only telemetry corpus that compounds across builds into presentable proof. Invoked by other pipeline skills at their STOP gates, or standalone on any decision list ("ratify this spec", "ratify TEST_SPEC.md", "walk me through ratifying these", "run the ratification protocol"). Done when every judgment item has a logged outcome — not when the doc is approved.'
 ---
 
 # Ratify
@@ -30,6 +30,14 @@ skill declares these, use them; otherwise derive them and confirm in one line be
    a red-then-green test, a rendered output, a running trace. **Never prose reassurance.**
 3. **Pace** — chunk size and batch cap (defaults below).
 
+Also set the sitting's **`baseline`** at the open — the regime the predictions are graded in:
+`documented` (an external spec of the design exists), `emergent` (the design is being articulated
+in-session; the native mode of most non-code work), or `partial` (documented material *informs*
+the artifact but does not *specify* it). Infer it at the start, carry it forward per item, and
+change it mid-sitting only by an explicit, declared state change — never silent drift. Baseline is
+what licenses a `judgment` verdict: without dots laid out (`emergent`), a miss is usually
+`missing-info`, not judgment.
+
 The AI's role derives from the contract as its complement: where the human is the oracle
 (domain knowledge, intent, taste), the AI is the **examiner** — its job is to extract and verify
 the human's judgment, not to collect approvals.
@@ -49,11 +57,16 @@ Run per item, threaded into conversation (see Chunking). The order is the mechan
    Before revealing, get a one-word confidence read on their stated expectation — **low / med /
    high**. This is `pre_confidence`: captured pre-reveal so it measures foresight honestly, and it
    pairs with the outcome to show calibration. Keep it light — one word, not a discussion.
+   - **On a blank (no expectation forms):** ratify is not an exam. Surface a bounded amount of
+     *factual, readable* context — never the recommendation (that would telegraph the answer and
+     break the order) — and re-elicit once. Whether the priming lets an opinion form is itself the
+     diagnostic that classifies the gap in step 4: an opinion now → the gap was `missing-info`; a
+     blank that survives priming → a real `no-opinion`, which is a finding.
 3. **Reveal and diff.** Show the recommendation. The delta between their stated expectation and
    the proposal *is* the discussion. Match → confirm fast and move on; the speed is earned.
    Divergence → work it: one of the two is wrong, and finding out which is the entire value of
    the stop.
-4. **Ratify, decide, and grade.** Record three things for the item:
+4. **Ratify, decide, and grade.** Record these for the item:
    - **`decision_type`** — what they decided to *do* with the recommendation: `build` (accept as
      is), `amend` (accept with changes), `demote` (drop or defer it). `amend` and `demote` are
      active authorship — the record of where the human steered the design rather than approving it.
@@ -65,9 +78,27 @@ Run per item, threaded into conversation (see Chunking). The order is the mechan
      - `no-opinion` — they couldn't form an expectation. Not a failure — a **finding**: it is the
        precise, automatically-generated signal for what to go read.
    - **`pre_confidence`** — the `low` / `med` / `high` they gave before the reveal (step 2).
-5. **Assign reading.** Every `surprised` and `no-opinion` gets a concrete pointer logged with it —
-   the code path, design-doc section, or data source that would have produced the opinion. The
-   blind spots assemble the reading list; nothing is read out of guilt.
+   - **`decision_origin`** — who originated the *substance* of the decision: `human` (you drove or
+     overrode it), `ai` (the recommendation stood), `human+ai` (jointly shaped). Present on every
+     item, `predicted` ones included — a fast yes can still be AI-originated. The authorship axis,
+     separate from the foresight grade.
+   - **`gap`** — only when `prediction_outcome ≠ predicted`: the *nature of the divergence from the
+     prediction*, not a deficiency taxonomy of the human. One of:
+     - `authored` — the divergence is your addition or override; you supplied what the prediction
+       didn't. A positive gap — ownership; owes no reading.
+     - `missing-info` — you lacked a fact that was not derivable pre-reveal; once surfaced, you
+       decided. A question answered, not a fault.
+     - `judgment` — the dots *were* connectable (chiefly: a documented baseline held them) and you
+       didn't connect them. The real blind spot — the only `gap` that feeds the reading list.
+     When aligned (`predicted`), `gap` has no value. **The derivability test** sorts missing-info
+     from judgment: after the reveal, was the missed piece connectable from what already existed
+     (the design baseline)? No → `missing-info`; yes → `judgment`. `judgment` is the default; any
+     downgrade must carry its reason in the log row.
+5. **Assign reading.** Reading is owed only where there was a real blind spot: a `gap: judgment`
+   or a `no-opinion` that survived priming. Each gets a concrete pointer logged with it — the code
+   path, design-doc section, or data source that would have produced the opinion. A `gap:
+   missing-info` is a note, not homework; a `gap: authored` owes nothing. The blind spots assemble
+   the reading list; nothing is read out of guilt.
 
 ## Chunking — conversation threads, not an atomized quiz, not bulk approval
 
@@ -91,7 +122,7 @@ Write `RATIFICATION_LOG.md` beside the ratified artifact (append per sitting; ne
 the log is a record, like the spec it accompanies). Per judgment item:
 
 ```
-| item | expectation stated | outcome | reading assigned |
+| item | expectation stated | pre-conf | outcome | origin | gap | decision | reading assigned |
 ```
 
 Plus a summary line per sitting: **prediction accuracy over judgment items** — "9/12 predicted,
@@ -116,15 +147,21 @@ owned code is being produced at agentic speed. Full spec:
 absolute path; honor `$SHIP_PIPELINE_DATA_DIR` if set). Plugin-owned, user-global, append-only,
 **never committed to a project repo**. Create the directory if absent.
 
-**One record per judgment item** (schema v1):
+**One record per judgment item** (schema v2):
 
 ```json
-{"schema_version":1,"source_skill":"ratify","timestamp":"<ISO-8601 UTC>","project":"<name>","development_stage":"<stage>","pre_confidence":"low|med|high","prediction_outcome":"predicted|surprised|no-opinion","decision_type":"build|demote|amend"}
+{"schema_version":2,"source_skill":"ratify","timestamp":"<ISO-8601 UTC>","project":"<name>","development_stage":"<stage>","baseline":"documented|emergent|partial","pre_confidence":"low|med|high","prediction_outcome":"predicted|surprised|no-opinion","decision_origin":"human|ai|human+ai","gap":"authored|missing-info|judgment","decision_type":"build|demote|amend"}
 ```
 
 - `development_stage` — the invoking context: `test-spec` · `finish-build` · `acceptance-gate` ·
   `build-loop` · `standalone` (standalone when `/ratify` is run directly on a doc). When a phase
   skill invokes this protocol, it names the stage; standalone runs log `standalone`.
+- `baseline` — the epistemic regime: `documented` · `emergent` · `partial` (see the decision
+  contract). Per-item, inherited from the sitting's open, changed only on a declared state change.
+- `decision_origin` — `human` · `ai` · `human+ai`: who originated the decision's substance. Present
+  on every record; the authorship axis.
+- `gap` — `authored` · `missing-info` · `judgment`, **omitted on `predicted` items** (no gap when
+  aligned). The nature of the divergence; only `judgment` is a blind spot that owes reading.
 - **No free text ever.** The item label and the assigned reading live only in
   `RATIFICATION_LOG.md`. The corpus carries enums and scalars, so it is presentation-safe by
   construction — showable on a screen without leaking a build.

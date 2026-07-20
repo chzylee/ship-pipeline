@@ -30,26 +30,29 @@ That is the presentable artifact behind "quickly generated, genuinely owned."
 Standard app-data pattern: mutable, user-scoped state lives under the app's config home
 (`~/.claude/…`), not in the distributed source tree.
 
-## The record — schema v1
+## The record — schema v2
 
 One JSON object per line, one line per judgment item:
 
 ```json
-{"schema_version":1,"source_skill":"ratify","timestamp":"2026-07-11T22:14:03Z","project":"runway","development_stage":"test-spec","pre_confidence":"high","prediction_outcome":"predicted","decision_type":"amend"}
+{"schema_version":2,"source_skill":"ratify","timestamp":"2026-07-15T18:44:17Z","project":"ratify-schema-v2","development_stage":"standalone","baseline":"partial","pre_confidence":"high","prediction_outcome":"surprised","decision_origin":"human","gap":"authored","decision_type":"amend"}
 ```
 
 | Field | Type | Values | Role |
 |-------|------|--------|------|
-| `schema_version` | int | `1` | **Stamp.** The version of *this record format* (mine), so v1 records still parse after the schema grows. Unrelated to your build's version. |
+| `schema_version` | int | `2` | **Stamp.** The version of *this record format*, so older records still parse after the schema grows. v1 records keep `1`; the v2 fields are simply absent on them. Unrelated to your build's version. |
 | `source_skill` | string | `"ratify"` | **Stamp.** Which ship-pipeline skill emitted the row. |
 | `timestamp` | string | ISO-8601 UTC (`YYYY-MM-DDThh:mm:ssZ`) | **Stamp.** When the item was ratified. |
 | `project` | string | repo/dir name, or a stable alias if the project is sensitive | **Context.** Which build the judgment belongs to. |
 | `development_stage` | enum | `test-spec` · `finish-build` · `acceptance-gate` · `build-loop` · `standalone` | **Context.** Where in the pipeline the judgment happened. `standalone` when `/ratify` is run directly on a doc. |
+| `baseline` *(v2)* | enum | `documented` · `emergent` · `partial` | **Context.** The regime the prediction was graded in — a spec of the design existed (`documented`), was articulated in-session (`emergent`, the native mode of non-code work), or a document *informed* but did not *specify* it (`partial`). This is what licenses a `judgment` verdict. |
 | `pre_confidence` | enum | `low` · `med` · `high` | **Proof.** Strength of the expectation, stated **before** the reveal. |
 | `prediction_outcome` | enum | `predicted` · `surprised` · `no-opinion` | **Proof.** Was that expectation right — the foresight grade. |
+| `decision_origin` *(v2)* | enum | `human` · `ai` · `human+ai` | **Proof.** Who originated the decision's substance — the authorship axis, present on every record. |
+| `gap` *(v2)* | enum | `authored` · `missing-info` · `judgment` | **Proof.** On a divergence, its *nature* (not a human-deficiency label); **omitted when `predicted`**. Only `judgment` is a true blind spot. |
 | `decision_type` | enum | `build` · `demote` · `amend` | **Proof.** What you decided to *do*: accept as-is / drop or defer / accept with changes. |
 
-The last three fields are the measurement; the rest is stamp and context.
+The five `pre_confidence` → `decision_type` fields are the measurement; the rest is stamp and context.
 
 ## What the data proves
 
@@ -64,6 +67,15 @@ The proof is not any single field — it is the cross-tabs a reader takes off th
 - **`pre_confidence` × `prediction_outcome` together** — calibration: not just whether you were
   right, but whether you *knew when you knew*. Well-calibrated judgment is what deep ownership
   looks like on a chart.
+- **`surprised` × `decision_origin:human` × `gap:authored`** — you were "surprised" only because
+  you overrode the recommendation and authored the better call. The pattern v1 mislabeled as a
+  whiff; v2 records it as ownership.
+- **`gap:judgment` rate** — the *true* blind-spot rate, isolated from `missing-info` (facts you
+  couldn't have had) and `authored` (calls you drove). This, not the raw `surprised` count, is the
+  number that should trend down as you master a domain.
+- **`gap:judgment` × `baseline`** — a `judgment` miss is only fairly charged when the dots existed
+  to connect (`documented` / `partial`). Reading `gap` against `baseline` keeps the blind-spot
+  count honest across code (usually `documented`) and non-code (usually `emergent`) work.
 
 Reading examples — `jq` shown for brevity, but the corpus is plain JSON Lines that any language
 reads (a five-line Python loop does the same); nothing here is a dependency of the pipeline:
@@ -124,8 +136,18 @@ the corpus is presentation-fit by construction, not by per-item review.
 - **Version inside every record.** When the schema grows, bump `schema_version`; old records keep
   their number and still parse. Migration is additive by default.
 - **No free text.** Anything a viewer shouldn't see has no field to live in.
+- **`gap` omitted when aligned.** A `predicted` record has no `gap` field — there was no divergence
+  to characterize.
+- **`baseline` is per-item, sitting-inherited.** Set once at the sitting's open and stamped on each
+  record; it changes mid-sitting only on an explicit, declared state change, never silent drift.
 
 ## Schema changelog
 
 - **v1** (2026-07-11) — initial: `schema_version`, `source_skill`, `timestamp`, `project`,
   `development_stage`, `pre_confidence`, `prediction_outcome`, `decision_type`.
+- **v2** (2026-07-15) — additive: `baseline` (documented/emergent/partial), `decision_origin`
+  (human/ai/human+ai), `gap` (authored/missing-info/judgment, omitted when `predicted`). v1 records
+  keep `schema_version:1` and still parse; the new fields are absent on them. Adds the axes that
+  separate *foresight* (was I right) from *authorship* (who drove it) and *gap nature* (a fact I
+  lacked vs a judgment I should have had) — so a `surprised` that was really an override stops
+  reading as a miss. Ratified via `/ratify`; see the skill's `RATIFICATION_LOG.md`.
