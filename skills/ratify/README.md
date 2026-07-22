@@ -22,7 +22,7 @@ What that buys:
   (`pre_confidence` · `prediction_outcome` · `decision_type`) to a plugin-owned, user-global
   corpus at `~/.claude/ship-pipeline/sends.jsonl`. Across builds it aggregates into presentable
   proof — calibration, authorship rate, blind-spot-to-mastery trend. Spec:
-  [`docs/telemetry/README.md`](../../docs/telemetry/README.md).
+  [`telemetry/README.md`](telemetry/README.md).
 
 ## Use
 

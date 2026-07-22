@@ -177,6 +177,9 @@ Tier the depth via the lens: spend it where maintainability/UX/cost live and whe
 Flag where the build diverged from the design doc / ledger: a swapped approach, a dropped
 guard, unplanned scope. Drift is the top ownership-corroder — you can't own "as if I built
 it" if it quietly diverged and you never saw it. If no design artifact exists, skip and say so.
+**Drift means built-vs-design, never built-vs-build-plan.** The plan is advisory — a build that
+reordered, merged, or abandoned planned increments while still satisfying the design has not
+drifted; do not report it. Only report divergence from what the design requires.
 
 ### 6. Gaps ranked
 Where ownership is thinnest, ranked on the axes that matter: which key decisions you cannot

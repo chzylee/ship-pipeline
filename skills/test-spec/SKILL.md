@@ -46,7 +46,10 @@ is a slice; "test spec for v1" is a sweep). A slice is **not** the weaker form �
 sweep is what floods ratification and starves prediction; the strong configuration is slices
 during the build plus one small sweep at the end.
 - **Slice (default during a build)** — one increment, feature, or subsystem, specced right after
-  it's built. Read only the design anchors that chunk delivers; propose only items the chunk owns.
+  it's built. **The slice is whatever was actually built**, not whatever the build plan called an
+  increment — if the build merged two planned increments or split one, spec the real chunk and say
+  so in the boundary line. Read only the design anchors that chunk delivers; propose only items the
+  chunk owns.
   Declare the boundary in the spec ("this slice covers X; Y is out of slice, owed to the sweep").
   **Seams are in scope:** a changed component's risk concentrates at its interfaces — the contract
   with its consumers, and the existing behaviors downstream depends on, belong to the slice, not
@@ -140,7 +143,11 @@ the design never asked for. (If confidence in a behavior is reconstructed rather
 — never present an inferred "must" as a confirmed one.)
 
 **The anchor class sets the trust class — label every item.**
-- **`design-anchored` (trust-bearing).** Traces to a design requirement or increment claim. These
+- **`design-anchored` (trust-bearing).** Traces to a **design requirement**. An increment claim from
+  the build plan counts only as a pointer *to* the design requirement it delivers — anchor to that
+  requirement, in the design's terms. The build plan is advisory and the build is free to deviate
+  from it, so a claim the plan makes that the design does not is not an anchor: it is a Judgment
+  question ("should the design have required this?"). These
   are the only items that can *honestly* fail — the intended-red discovery tests targeting
   non-obvious edge cases, invariants, and failure modes. The spec must instruct the test-builder
   to author these **blind to the implementation**: a fresh session given the design doc + this

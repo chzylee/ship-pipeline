@@ -141,36 +141,76 @@ The `RATIFICATION_LOG.md` is the human record of one build. Alongside it, append
 per judgment item** to the Ship Pipeline telemetry corpus — the machine record across *every*
 build. This is what turns scattered per-project logs into one presentable body of evidence that
 owned code is being produced at agentic speed. Full spec:
-[`docs/telemetry/README.md`](../../docs/telemetry/README.md).
+[`telemetry/README.md`](telemetry/README.md).
 
 **Where:** `~/.claude/ship-pipeline/sends.jsonl` — resolve `$HOME` at runtime (never hardcode an
 absolute path; honor `$SHIP_PIPELINE_DATA_DIR` if set). Plugin-owned, user-global, append-only,
 **never committed to a project repo**. Create the directory if absent.
 
-**One record per judgment item** (schema v2):
+**The telemetry setting gates recording, and (later) sending.** At the sitting's open, read
+`~/.claude/ship-pipeline/config.json`:
+
+- **absent (never configured)** — record locally, and **once**, show the first-run notice below.
+  Recording local-first before opt-in is safe because nothing transmits and the notice discloses it
+  immediately; the setting's job is to gate *sending*, which no version does yet.
+- **`telemetry: "local"`** — record locally; the user has acknowledged it. Never transmit.
+- **`telemetry: "off"`** — record nothing this sitting. Skip the whole corpus block.
+
+Managed by [`/ratify-configure`](../ratify-configure/SKILL.md) — never hand-edit `config.json` here.
+
+**First-run notice** (show once, when `config.json` is absent — plain, not a consent gate since
+nothing leaves the machine):
+
+> 📊 Ratify records one enums-only line per decision to `~/.claude/ship-pipeline/sends.jsonl` on
+> this machine — no code, paths, prompts, or item text, so it's safe to read and, later, to share.
+> It's local and never sent anywhere. Run `/ratify-configure` to see your own numbers, keep it as
+> is, or turn it off.
+
+**One record per judgment item** (schema v3):
 
 ```json
-{"schema_version":2,"source_skill":"ratify","timestamp":"<ISO-8601 UTC>","project":"<name>","development_stage":"<stage>","baseline":"documented|emergent|partial","pre_confidence":"low|med|high","prediction_outcome":"predicted|surprised|no-opinion","decision_origin":"human|ai|human+ai","gap":"authored|missing-info|judgment","decision_type":"build|demote|amend"}
+{"schema_version":3,"source_skill":"ratify","skill_version":"<x.y.z>","timestamp":"<ISO-8601 UTC>","install_id":"<id>","sitting_id":"<id>","record_id":"<id>","item_index":1,"project_id":"proj-<hash>","sitting_seq":1,"sitting_planned":6,"subject_type":"code|non-code","baseline":"documented|emergent|partial","cold":true,"pre_confidence":"low|med|high","prediction_outcome":"predicted|surprised|no-opinion","decision_origin":"human|ai|human+ai","gap":"authored|missing-info|judgment|none","decision_type":"build|demote|amend"}
 ```
 
-- `development_stage` — the invoking context: `test-spec` · `finish-build` · `acceptance-gate` ·
-  `build-loop` · `standalone` (standalone when `/ratify` is run directly on a doc). When a phase
-  skill invokes this protocol, it names the stage; standalone runs log `standalone`.
-- `baseline` — the epistemic regime: `documented` · `emergent` · `partial` (see the decision
-  contract). Per-item, inherited from the sitting's open, changed only on a declared state change.
-- `decision_origin` — `human` · `ai` · `human+ai`: who originated the decision's substance. Present
-  on every record; the authorship axis.
-- `gap` — `authored` · `missing-info` · `judgment`, **omitted on `predicted` items** (no gap when
-  aligned). The nature of the divergence; only `judgment` is a blind spot that owes reading.
+**At the sitting's open** — establish once, then stamp on every record from the sitting:
+
+- `install_id` / `install_salt` — read from `~/.claude/ship-pipeline/install.json`; create on
+  first run. **Never author an id yourself** — model-generated "random" strings are patterned and
+  collide. Shell out: `uuidgen`, or `python -c "import uuid; print(uuid.uuid4().hex[:16])"`.
+- `sitting_id` — one OS-generated id for the sitting.
+- `sitting_seq` — increment the per-install counter in `install.json`. Counts *every* sitting,
+  including untransmitted ones, so the experience axis survives partial sends.
+- `sitting_planned` — judgment items queued **for this sitting**, already capped. Not the whole
+  backlog: a sitting that legitimately stops at the batch cap must not read as abandoned.
+- `subject_type` — `code` · `non-code`. What is under analysis, not the artifact's file type.
+- `project_id` — `hash(install_salt + project name)`; always present, the grouping key.
+- `skill_version` — this skill's `VERSION`. Distinct from `schema_version`: one says how to parse
+  a record, the other says what its fields *mean*. A protocol change that redefines a value must
+  be segmentable after the fact.
+
+**Per item:**
+
+- `record_id` — one OS-generated id. Identity, and the dedup key if the record is ever transmitted.
+- `item_index` — 1..N within the sitting. `max(item_index)` against `sitting_planned` is how a
+  completed sitting is told from an abandoned one.
+- `cold` — `true` when the expectation formed **without** the priming sub-step; `false` when a
+  blank was primed first. Fixed pre-reveal, so it stays un-gameable. A `predicted` that needed
+  priming is not the same evidence as one called cold.
+- `baseline`, `pre_confidence`, `prediction_outcome`, `decision_origin`, `decision_type` — exactly
+  as graded in the protocol above.
+- `gap` — `authored` · `missing-info` · `judgment` on a `surprised` item, `none` otherwise.
+  **Always present.** Only interpretable *conditioned on `prediction_outcome`*: `none` means "no
+  divergence" on a `predicted` item and "no prediction to diverge from" on a `no-opinion` one.
+  Never chart `gap` alone.
 - **No free text ever.** The item label and the assigned reading live only in
   `RATIFICATION_LOG.md`. The corpus carries enums and scalars, so it is presentation-safe by
   construction — showable on a screen without leaking a build.
 
 **The sensitivity call** — once per sitting, before appending: is the project's *identity*
-something the user would rather not have in a shareable corpus? Default logs the real `project`
-name; if yes, log a stable alias (`proj-<short-hash>`) instead. The measurements still aggregate —
-only the name is withheld. Because a record structurally holds no free text, this is the only
-redaction decision, and it is coarse and fast — ask it once, not per item.
+something the user would rather not have in a shareable corpus? `project_id` is always logged and
+is already a salted hash, so this decides only whether the human-readable `project` name rides
+along. Default logs it; if the user says no, omit the field entirely. Because a record structurally
+holds no free text, this is the only redaction decision — ask it once, not per item.
 
 **Append-only.** One line per item, never rewrite a past line. Re-ratifying a doc appends fresh
 records (a new sitting); it does not edit old ones — the corpus is a history, like the human log
