@@ -118,46 +118,20 @@ not built ahead.
 | `/scout` | **Available** (v2.0) — the front door: inverted office-hours that discovers what to build from a person + their real work → a Build Brief |
 | `/own-your-code` | **Available** (v2.1.0) — turn an AI-built repo into an onboarding that confers ownership |
 | `/test-spec` | **Available** (v0.5.0) — dialogue-driven skill producing a Test Spec: what must be tested to trust a build; slice mode per increment, sweep mode per version; ratifies via `/ratify` |
-| `/ratify` | **Available** (v0.4.0) — cross-stage ratification protocol: prediction-before-reveal at blocking stops, logging `predicted`/`surprised`/`no-opinion` into a measurable ownership record + blind-spot reading list. Also emits a sanitized, plugin-owned telemetry corpus (`~/.claude/ship-pipeline/sends.jsonl`) that compounds across builds into presentable proof — see [telemetry schema](skills/ratify/telemetry/README.md) |
+| `/ratify` | **Available** (v0.4.0) — **external dependency: lives in [chzylee/skill-library](https://github.com/chzylee/skill-library), install it (+ `/ratify-configure`) from there.** Cross-stage ratification protocol: prediction-before-reveal at blocking stops, logging `predicted`/`surprised`/`no-opinion` into a measurable ownership record + blind-spot reading list. Also emits a sanitized telemetry corpus (`~/.claude/ship-pipeline/sends.jsonl`) that compounds across builds into presentable proof — see [telemetry schema](https://github.com/chzylee/skill-library/blob/main/ratify/telemetry/README.md). The pipeline invokes it by name at every stop gate |
 | `/finish-build` | **Available** (v0.1.0) — the execution-stage **driver**: drives committed-failing (`xfail`-strict) tests to green through a predict-then-reveal loop, escalating design forks to `/ratify` — in-loop for an increment's reds, canonically for the sweep's parked legs |
 | `/acceptance-gate` | **Available** (v0.1.0) — the **criterion** to `/finish-build`'s driver: administers the gate that decides DONE — runs the mechanical legs (clean-checkout command, failure paths, documented path), presents the evidence and human legs as blocking stops, records the verdict. Never fixes code; never passes a human leg on the human's behalf |
 | `/sidequest` | **Experimental** (v0.1.0) — the ▸ stage's autonomous second method: mines friction, screens with the black-box test (low ownership requirement, not low maintenance), emits launch-ready autonomous build briefs into the Sidequest Projects stockpile. Drafted ahead of first proven run; graduates on the first sourced-and-shipped sidequest |
 | `/build-plan` | Next up — turn a design doc into a Build Plan: shared context + a *recommended* increment ordering with build prompts sized to the owner's verification bandwidth. Advisory by construction: it must be re-runnable against a part-built repo to reconcile the plan to reality, and must never ask the builder to justify a deviation the design already covers |
 | `/build-review`, `/bake-off`, `/current-state` | Being harvested |
 
-## The public page — `/record`
+## The public page — the ratify proof card
 
-A self-contained static page that presents what `/ratify` is and the ownership data behind it, as a
-shareable explainer. Plain HTML — no build step, no dependencies, no JavaScript framework — served
-from the repo root by GitHub Pages (light + dark, responsive).
-
-**What it is.** It leads with what `/ratify` does and why it matters (evaluating an AI's output vs.
-merely accepting it), then shows the evidence: the telemetry corpus
-(`~/.claude/ship-pipeline/sends.jsonl`) aggregated across five delegated deliverables — most of them
-*not* code — with the calibration read, the gap-nature finding, the code case (the first build it
-ran on), and two worked moments. Numbers are recomputed from the raw corpus, never stored derived;
-the page fetches nothing at runtime.
-**Served at** https://chzylee.github.io/ship-pipeline/record/ · source: [`record/index.html`](record/index.html)
-
-### Viewing it locally
-
-Static, so any file server over the repo root works:
-
-```bash
-# from the repo root
-python -m http.server 8000
-# then open http://localhost:8000/record/ in a browser
-```
-
-Opening `record/index.html` directly via `file://` also works for a quick look.
-
-For hot reload while editing `record/index.html` or `record/styles.css`:
-
-```bash
-# from the repo root
-npx live-server --port=8000
-# then open http://localhost:8000/record/ in a browser — edits auto-reload
-```
+The self-contained static page presenting what `/ratify` is and the ownership data behind it
+**moved with the skill** to skill-library's per-skill Pages site:
+**https://chzylee.github.io/skill-library/ratify/** · source:
+[`docs/ratify/`](https://github.com/chzylee/skill-library/tree/main/docs/ratify) in that repo.
+The old `/record/` URL here redirects.
 
 ## Install
 
@@ -192,6 +166,11 @@ done
 ```
 
 Symlinks mean a `git pull` updates every installed skill in place.
+
+> **Dependency:** `/ratify` and `/ratify-configure` are not in this repo — they live in
+> [chzylee/skill-library](https://github.com/chzylee/skill-library) and the pipeline invokes
+> them by name at its stop gates. Install them from there (one-skill prompt or the
+> `skill-library` plugin — see that repo's README).
 
 ### Plugin mode — namespaced `/ship-pipeline:*`
 
