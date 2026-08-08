@@ -20,7 +20,7 @@ than a feeling, and the trail it leaves is the onboarding a teammate could pick 
 | # | Stage | What it produces | What verifies it |
 |---|-------|------------------|------------------|
 | 0 | Sourcing & Scope Gate — find what to build, harden it (methods: Scout · Sidequest · office-hours) | a Build Brief + lane declaration, hardened into the one job / definition of done / not-in-v0 list | method-matched: Reality Probe (main lane) · black-box test + greenlight (sidequest lane); the segment / one-job / kill checklist |
-| 1 | Design Doc | **the truth** — the canonical spec everything traces to | design review |
+| 1 | Design Doc (`/design-doc` — `derive` a version/feature slice · `sync` a doc to current state) | **the truth** — the canonical spec everything traces to, as addressable units | design review at the idea↔design seam; the nine staleness checks |
 | 2 | Build Plan | a **recommendation**: shared whole-design context + a proposed increment ordering with per-increment build prompts, sized to the owner's prediction span | anchor coverage (increments' union = the whole design) + cross-model cold read (or a two-build bake-off) |
 | 3 | ⟳ Build Loop | the code, one increment at a time — the increment you judge is next, which need not be the plan's: build → `/test-spec` slice → tests made real (reds = decisions still owed) → `/finish-build` drives reds green → ratify gate → commit; WIP 1 | per increment: slice tests green + the owner's verify act (predict-then-run · break-it-on-purpose · change-one-thing), logged |
 | 4 | Build Review | code ↔ design reconciliation of the assembled whole; the plan is reconciled to what was actually built | fresh judge: six checks → judgment + blockers |
@@ -91,6 +91,26 @@ one fact is drift: retire any per-project "current state" wiki page in favor of 
 **Changelog boundary:** the Notion Changelog records changes to the pipeline's *stage documents*;
 the repo's `decision_log.md` records decisions about the *code/build itself*.
 
+**The `design-doc impact:` line — the drift fix.** Every `decision_log.md` and `RATIFICATION_LOG.md`
+entry carries a `design-doc impact:` line: `none`, or the design unit/section it changed. A decision
+is not done until the doc it invalidates is updated. Drift is normal — details get ironed out in code
+faster than in the spec, and the spec is the one artifact with no immediate consumer, so nothing
+breaks *today* when it goes stale. What breaks is the next agent, which has no memory and takes the
+stale doc as truth. The impact line is the write-time catch that keeps a recorded decision from
+rotting the doc it contradicts; `/design-doc sync` is only the backstop for when it's missed. On
+Runway v1, fourteen drifts were all faithfully *recorded* and *none* propagated — capture worked,
+routing didn't exist. This line is the routing.
+
+**The framework ships the catch — you don't wire it per project.** Keeping the build viable to the
+design is the pipeline's whole point, so the enforcement lives in the pipeline, not in each repo's
+settings. Ship Pipeline ships a `PostToolUse` hook ([`hooks/impact-line-reminder.sh`](hooks/impact-line-reminder.sh))
+that fires on any edit to a `decision_log.md` or `RATIFICATION_LOG.md` and, when the change carries
+no `design-doc impact:` line, nudges the model to add one and propagate. It is scoped by artifact
+name (inert in every other repo and on every other file), non-blocking (a reminder, never a wall),
+and dependency-free (POSIX `sh` + `grep`, so it runs in Git Bash on Windows and any POSIX shell
+elsewhere). Plugin-mode installs load it automatically from `hooks/hooks.json`; bare-skill installs
+add the one hook to `~/.claude/settings.json` (snippet in [Install](#install)).
+
 The `docs/build_status.md` skeleton — the one place "where am I" is answered:
 
 ```markdown
@@ -116,6 +136,7 @@ not built ahead.
 | Skill | Status |
 |-------|--------|
 | `/scout` | **Available** (v2.0) — the front door: inverted office-hours that discovers what to build from a person + their real work → a Build Brief |
+| `/design-doc` | **Available** (v0.4.0) — stage 1's skill, in two UX shapes. `derive` is a **session skill** carrying the baked **Software architect** persona: it walks scattered inputs (no required parent; each ranked by what it is authoritative *for*) to a doc that binds, pressing **by tier** on one test — *would a wrong build still pass this sentence?* Modes: Owner-reviewed (default) · Unattended build (explicit entry only; exit gate is a cold subagent read). `sync` is **fast-mechanical**: bootstrap a pre-schema doc, then apply the design decisions made since the last edit via nine staleness checks in both directions — build-ahead and doc-ahead — amending the doc **body**, not just a log; a tooling failure is never reported as drift. Design, never ordering — sequencing belongs to `/build-plan`. First proven on a real `sync` of Runway v1 (2026-07-23) |
 | `/own-your-code` | **Available** (v2.1.0) — turn an AI-built repo into an onboarding that confers ownership |
 | `/test-spec` | **Available** (v0.5.0) — dialogue-driven skill producing a Test Spec: what must be tested to trust a build; slice mode per increment, sweep mode per version; ratifies via `/ratify` |
 | `/ratify` | **Available** (v0.4.0) — **external dependency: lives in [chzylee/skill-library](https://github.com/chzylee/skill-library), install it (+ `/ratify-configure`) from there.** Cross-stage ratification protocol: prediction-before-reveal at blocking stops, logging `predicted`/`surprised`/`no-opinion` into a measurable ownership record + blind-spot reading list. Also emits a sanitized telemetry corpus (`~/.claude/ship-pipeline/sends.jsonl`) that compounds across builds into presentable proof — see [telemetry schema](https://github.com/chzylee/skill-library/blob/main/ratify/telemetry/README.md). The pipeline invokes it by name at every stop gate |
@@ -171,6 +192,27 @@ Symlinks mean a `git pull` updates every installed skill in place.
 > [chzylee/skill-library](https://github.com/chzylee/skill-library) and the pipeline invokes
 > them by name at its stop gates. Install them from there (one-skill prompt or the
 > `skill-library` plugin — see that repo's README).
+
+**The drift-catch hook (bare-skill installs only — plugin mode loads it automatically).** Add this
+to `~/.claude/settings.json` so the `design-doc impact:` convention is enforced wherever you build
+(replace the path if you cloned elsewhere):
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "sh \"$HOME/repos/ship-pipeline/hooks/impact-line-reminder.sh\"" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+It fires only on `decision_log.md` / `RATIFICATION_LOG.md` edits and is silent everywhere else.
 
 ### Plugin mode — namespaced `/ship-pipeline:*`
 
