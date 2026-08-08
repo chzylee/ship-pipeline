@@ -154,6 +154,16 @@ The self-contained static page presenting what `/ratify` is and the ownership da
 [`docs/ratify/`](https://github.com/chzylee/skill-library/tree/main/docs/ratify) in that repo.
 The old `/record/` URL here redirects.
 
+## Developing this pipeline — dev builds
+
+Work in progress lives on the `dev` branch; `master` is what installs run. A skill under
+development deploys as a separate `<skill>-dev` skill (generated, explicit-invocation-only)
+so it never shadows the stable version — the [dev-build pattern](https://github.com/chzylee/skill-library/tree/main/maintenance/dev-build),
+configured for this repo by `.dev-build.conf`. Cloners are asked to approve one hook:
+[`scripts/dev-build-check.sh`](scripts/dev-build-check.sh), a short read-only script that
+warns at session start (in this repo only) when a deployed dev build is stale. Declining
+costs only the warnings.
+
 ## Install
 
 Two ways to install. The **default gives skills their bare names** (`/own-your-code`) —
