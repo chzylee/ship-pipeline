@@ -158,7 +158,7 @@ The old `/record/` URL here redirects.
 
 Work in progress lives on the `dev` branch; `master` is what installs run. A skill under
 development deploys as a separate `<skill>-dev` skill (generated, explicit-invocation-only)
-so it never shadows the stable version — the [dev-build pattern](https://github.com/chzylee/skill-library/tree/main/maintenance/dev-build),
+so it never shadows the stable version — the [dev-build pattern](https://github.com/chzylee/dev-build),
 configured for this repo by `.dev-build.conf`. Cloners are asked to approve one hook:
 [`scripts/dev-build-check.sh`](scripts/dev-build-check.sh), a short read-only script that
 warns at session start (in this repo only) when a deployed dev build is stale. Declining
