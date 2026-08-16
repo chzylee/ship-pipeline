@@ -8,8 +8,9 @@ because you never read every line or weighed the options. This gives that back �
 re-reading every line (that re-spends the week you saved), but by reconstructing the project
 top-down and re-deriving only the decisions that aren't already yours.
 
-It is **stage 6 of the [Ship Pipeline](../../README.md)** — the ownership pass, run only on a
-build the acceptance gate has proven runs — and works standalone on any repo.
+It is the **ownership pass of [Ship Pipeline](../../README.md)** — run after an increment the
+acceptance gate has proven, not as a numbered step of the S1-S7 loop — and works standalone on any
+repo.
 
 ## Who it's for
 Write-target is **an engineer who inherited the repo from someone no longer on the team** and
@@ -40,14 +41,18 @@ code**: say what the project is and where it stands, hold its core-component map
 (and know how to evolve) each key decision on maintainability / UX / cost.
 
 ## Output
-One regenerable guide — `OWN_YOUR_CODE.md` at repo root, and/or a Notion **Project Ownership**
-sub-page — in this order: **cockpit** (one screen: what-it-is + current state + component map +
-decisions index + where-to-spend) → **the system** (components + how they connect + run/debug cold)
-→ **data pipeline** (first input → final output — the data flow the component map doesn't show) →
-**each component broken down** (decisions nested, justified on maint/UX/cost) → **drift** (built vs
-design) → **ranked gaps** → **drills**. A real handoff doc then gets a **cross-model onboarding read**
-(a fresh reader validates it) folded back before it ships. The local file stays always-current
-(overwrite); Notion is a versioned run archive (`{Project} — v{version} · {date}`).
+One regenerable guide — **`docs/own_your_code.md`** in the target repo, in version control — in this
+order: **cockpit** (one screen: what-it-is + current state + component map + decisions index +
+where-to-spend) → **the system** (components + how they connect + run/debug cold) → **data pipeline**
+(first input → final output — the data flow the component map doesn't show) → **each component
+broken down** (decisions nested and justified) → **drift** (built vs design) →
+**ranked gaps** → **drills**. A real handoff doc then gets a **cross-model onboarding read** (a fresh
+reader validates it) folded back before it ships.
+
+**The repo is canonical**, and the file is overwritten in place on each run — version history is
+git's job. A wiki may hold a dated, non-editable snapshot that names `<repo>/docs/own_your_code.md`
+as its source; an editable copy anywhere else is the exact thing that makes a later run read the
+wrong file.
 
 This is the **engineering wiki**, distinct from the project's own README: the README is the
 user/public front door; this is the internal onboarding that confers ownership of the build.
@@ -77,9 +82,11 @@ Invoke on a built repo: "own my code for X" / "onboard me to X" / "step into thi
 Read-only on your code — never modifies code or data. Re-runnable; regenerate after any change.
 
 ## Status
-**v2.0** (see `VERSION`). Onboarding/top-down form + maint/UX/cost lens; adds the data-pipeline
-section, the portable-first cross-model onboarding read (fresh sub-agent by default; different
-lineage when a free key is present), and versioned Notion runs. Validated on **Runway** — including
-a three-way cross-model bake-off (two independent Claude passes, each Gemini-evaluated).
+See [`VERSION`](VERSION). Onboarding/top-down form; the data-pipeline section; and the
+portable-first cross-model onboarding read (fresh sub-agent by default, different lineage when a
+free key is present). The v1 roster rework moved the output home into the repo, made retraces and
+conformance reports its raw material, and replaced the old maintainability/UX/cost ranking with the
+**re-entry lens** — reconstruct, reach, surprise — so nothing here computes how much a decision
+ought to matter to you.
 
 `SKILL.md` is the canonical instruction set; the version lives in `VERSION`.

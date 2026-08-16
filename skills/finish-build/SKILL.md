@@ -1,202 +1,166 @@
 ---
 name: finish-build
-description: 'Drive committed, ratified-but-deferred failing tests to green — ownership intact at every step — until the Acceptance Gate command actually passes and the build is genuinely done, ready for own-your-code. The Ship Pipeline execution-stage driver, sibling to test-spec (spec stage) and ratify (decision stage): once tests are built and some are committed-failing (xfail-strict) to pin behavior the code must catch up to, it runs each to green through a predict-then-reveal loop that forces demonstrated judgment instead of blind fix-pasting, escalating every real design fork to a full ratify. Triggers on "finish the build", "drive the code-fix / WARN step", "work the xfails to green", "take this to definition of done", or starting the make-it-pass step after tests are written. Not done until the suite is fully green with deferred markers removed, no prior test regressed, every fork logged as a decision, owed design amendments struck, and the build-status doc advanced — never a green light you did not reason your way to.'
+description: 'Drive committed, ratified-but-deferred failing tests to green until the increment is genuinely done and the Acceptance Gate can rule on it. This is S6, and it is AUTONOMOUS: it does not stop for the owner and does not ask them to predict each fix. What matters is that they review the output, not that they approve every move on the way there — the prediction beat lives at S5, where /ratify is baked into /test-spec and the owner rules on what must be protected against. Per owed behavior it names the trap a naive fix walks into, makes the change, verifies red-then-green with nothing regressed, and logs the trap, the fix, and the evidence, so the result is a green light someone can actually read rather than one they have to trust. Real mechanism forks are picked, recorded in declaration form, logged to docs/decision_log.md with a design-doc impact line, and SURFACED in the output — never halted for, never buried. Iteration here is the phase working as intended and says nothing about the quality of the design doc, unlike the rework loop at build time whose target is zero. On completion it chains straight into /acceptance-gate, so the owner never has to remember to knock on that door; the gate still refuses to pass any human leg on their behalf. Internal to Ship Pipeline — normally reached by /adversarial-review. Accepts --retrace. Triggers on "finish the build", "work the xfails to green", "drive the code-fix step", "take this to definition of done", or starting the make-it-pass step after tests are written. Not done until the suite is fully green with deferred markers removed, no prior test regressed, every fork logged and surfaced, and docs/build_status.md advanced.'
 ---
 
 # Finish Build
 
-Drive a build from **"tests written, some deliberately failing"** to **"the one green command that
-IS done"** — the Acceptance Gate's bar — without surrendering ownership on the way. Spec-first
-builds end here: `/test-spec` ratifies what must be true, the tests get built, and a set of them is
-committed **failing on purpose** (`xfail(strict)`) to pin behavior the code doesn't have yet. This
-skill is the driver that makes the code catch up, one behavior at a time, with the human's judgment
-demonstrated at each step rather than assumed.
+Drive an increment from **"tests written, some deliberately failing"** to **"the one green command
+that IS done"** — the Acceptance Gate's bar.
 
-It is the execution-stage sibling of the two decision-stage drivers: `/test-spec` produces the
-ratified spec, `/ratify` turns blocking stops into demonstrated judgment, and **this** turns a
-red-or-xfail suite into an earned green one. Same pipeline value — *own the result* — applied to the
-part where code gets written.
+This is **S6**. `/test-spec` ratified what must be protected against, the tests were built, and a set
+of them is committed **failing on purpose** (`xfail(strict)`) to pin behavior the code does not have
+yet. This skill makes the code catch up, one behavior at a time.
+
+## This step is autonomous
+
+**It does not stop for the owner, and it does not ask them to predict each fix.** What matters is
+that they review the *output*, not that they approve every move on the way there.
+
+The prediction beat lives at the touchpoints, principally **S5** — `/ratify` is baked into
+`/test-spec`, where the owner rules on what must be protected against and what they are willing to
+be wrong about. That is where their judgment is load-bearing and where nobody else can substitute
+for them. Re-running the same ceremony per fix spends attention on execution, where the owner is not
+the oracle, and buys nothing S5 did not already buy.
+
+So: work the list, log everything, and hand back a result the owner can actually read.
 
 ## The failure it exists to kill
 
-**Blind paste-execution.** You have a stack of fix-prompts, one per failing test; you fire them in
-order; the suite goes green; you call it done. This recreates the exact defect the whole pipeline
-fights — a green light nobody reasoned their way to. A passing suite you didn't understand is worth
-no more than an OK you clicked without reading. "AI writes, human owns" only holds if the human can
-say, per fix, *what was wrong, why the fix is right, and what would have made it wrong.*
+**The green nobody can explain.** A stack of fixes gets applied, the suite turns green, and the
+increment is called done — and afterward no one can say what was wrong, why each fix is right, or
+what would have made it wrong. A passing suite you cannot account for is worth no more than an OK
+clicked without reading.
 
-So the fix-prompts, if any exist, are an **answer key checked against after you predict** — never the
-script. The prediction is the ownership; the reveal is the grade.
+Autonomy does not change that. It changes *where the accounting happens*: not in a live dialogue
+per fix, but in a record complete enough that reading it confers the same understanding. **If the
+log does not let the owner reconstruct what happened, this skill has failed even with a green
+suite.**
 
-## What "done" is here (calibration — read this first)
+## What "done" is here
 
-Not "the suite is green." Green is necessary, not sufficient — a suite can be green because ratified
-MUST behaviors are still parked under `xfail`. **Done is:** every deferred marker removed, the suite
-fully green with nothing regressed, every design fork taken along the way logged as a decision, and
-the build-status doc advanced to the next stage. That is the Acceptance Gate's "one green command
-that IS done" made true — and only then does the build hand off to `/own-your-code`.
+Not "the suite is green." Green is necessary and not sufficient — a suite can be green because
+ratified behaviors sit parked under `xfail`.
 
-**Success test.** When this closes, you can point at any behavior that was owed and say what it does,
-where the fix lives, and the trap a naive fix falls into — and the suite proves it. A teammate reading
-the ownership log sees which fixes you predicted and which surprised you.
+Done is: **every deferred marker removed, the suite fully green with nothing regressed, every fork
+logged and surfaced, every owed design amendment struck, and `docs/build_status.md` advanced.**
+
+**Success test.** The owner reads the output and can point at any behavior that was owed and say
+what it does, where the fix lives, and the trap a naive fix falls into — without having watched it
+happen.
 
 ## Where it sits — the handshake
 
-Upstream is `/test-spec` (the ratified must-index + any "design amendments owed") and the built test
-suite with its committed-failing items. Downstream is the Acceptance Gate's failure-face verification
-and then `/own-your-code`. This skill occupies the span between *tests written* and *gate green* — the
-"code catches up to the ratified tests" work. It is the pipeline's core build loop (build → test →
-ratify, one increment built-but-unverified at a time) run **test-first**: the increments are the
-pre-committed failing tests.
+**Upstream:** the ratified `TEST_SPEC.md` must-cover index and the built test suite with its
+committed-failing items. Normally reached by `/adversarial-review`, which sequences S5 → S6 → S7.
 
-Establish the handshake on entry: confirm the committed-failing set, its spec anchors, and the owed
-amendments before touching code. If there is no test spec, say so — reconstruct the contract from the
-tests themselves and stamp the work un-anchored to spec.
+**Downstream, this skill chains directly into `/acceptance-gate`** once its definition of done
+holds. The owner does not have to remember to invoke the gate — but chaining automates the
+*invocation*, never the *verdict*. The gate still presents its human legs as blocking stops and
+still refuses to pass one on anyone's behalf.
+
+Assume a fresh session: **self-orient from the repo, not from prior conversation.** On entry, run
+the suite to see the current pass / xfail / red state, read `TEST_SPEC.md`, read
+`docs/checks/<increment>.md` for what the audit and conformance passes already found, and read
+`docs/build_status.md` for position. Everything needed is on disk. If there is no test spec, say so
+— reconstruct the contract from the tests themselves and stamp the work un-anchored to spec.
+
+**Options.** `--retrace` · on completion, produce an account of how the work went via `/retrace`,
+appended to `docs/retrace/<increment>.md`. The fixes are the most instructive material a learner can
+read, because they are where the reasoning is visible.
 
 ## Scope — hold this line
 
-- **Owns:** ordering the owed behaviors, the per-item predict→build→verify→gate loop, escalating forks
-  to `/ratify`, logging decisions + the ownership record, and advancing the build-status doc to done.
-- **Does NOT:** re-litigate the spec (that was `/test-spec`'s ratified call), invent behavior no
-  ratified test pins, or "improve" code outside the failing tests' contracts. If a test looks wrong,
-  that's a spec question — surface it, don't quietly re-scope by editing the test to pass.
-- The clean line: *test-spec → (build tests) → **finish-build → green command** → acceptance gate →
-  own-your-code.*
+- **Owns:** ordering the owed behaviors, the per-item fix loop, picking and recording forks,
+  surfacing them in the output, striking owed amendments, advancing `docs/build_status.md`, and
+  chaining into the gate.
+- **Does NOT:** re-litigate the spec (ratified at S5) · invent behavior no ratified test pins ·
+  "improve" code outside the failing tests' contracts · weaken, skip, or delete a failing test · halt
+  for a fork · issue the gate verdict.
 
-## The persona — who you are while running this
-
-A **senior engineer closing out a build you intend to own.** You did not type most of this code, and
-that is precisely why you refuse to let it pass without understanding it. You are not racing to green;
-you are making green mean something. Every fix you can't predict is a hole in your ownership, and you'd
-rather find it now than in the onboarding doc.
+If a test looks wrong, that is a spec question — surface it. Never re-scope by editing the test to
+pass.
 
 ## Orient — before the loop
 
-Assume a fresh chat — **self-orient from the repo, not from prior conversation.** On entry: run the
-suite to see the current pass / xfail / red state, read the Test Spec (its must-index and any *design
-amendments owed*), and read the build-status / current-state doc for where the build sits. Everything
-the loop needs is in the repo; a fresh session after `/test-spec` and the gate-builder prompt has it
-all. Then:
-
 1. **Inventory** the committed-failing tests (`xfail(strict)`, `skip`, or plain red) and map each to
    its spec anchor and the code seam it names.
-2. **Order** them cheapest-first / dependency-aware. Group the purely-mechanical; isolate any that
-   carry a real **design fork** (more than one defensible mechanism) — those are decision items, not
-   execution items.
-3. **Name the traps.** For each item, the non-obvious way a naive fix is wrong (double-escaping,
-   breaking an adjacent contract, a fix that makes the test pass but the behavior still wrong). Hold
-   these back — they are reveal material, not a briefing.
+2. **Order** them cheapest-first and dependency-aware. Group the purely mechanical; isolate any
+   carrying a real mechanism fork.
+3. State the plan, the count (*"9 owed: 8 mechanical, 1 fork"*), and the definition of done. Then run.
 
-State the plan, the count ("9 owed: 8 mechanical, 1 fork"), the definition of done, and the
-**proposed engagement tier per item** (see *Tier the engagement* below) — then let the owner adjust
-before you start. Walk items in that tiering.
+## The core loop — per owed behavior
 
-## Tier the engagement — spend attention where ownership is at stake
-
-Full predict→reveal on *every* item is a failure mode, not diligence: it spends the owner's attention
-where nothing is at stake and eats the speed the tool exists to give. Tier per item, exactly as
-`/ratify` does — *mechanical items are grouped and confirmed in one pass; the protocol spends its cost
-where the human is the oracle; everywhere else, compress.*
-
-- **Mechanical** — cleanly-traced one-liners and guards, no real fork → **compressed path:** state the
-  fix and its trap up front, build, verify, log. Skip the predict beat; batch them.
-- **Judgment / fork** — more than one defensible mechanism, high blast radius, the call the owner will
-  be asked to defend → **full path:** the predict→reveal loop below; a real fork escalates to `/ratify`.
-
-Propose the tiering in Orient and let the owner move any item between tiers — *"just do these, I don't
-need to sweat them"* and *"actually make me predict that one"* are both valid. **Deciding what is worth
-owning is itself the senior judgment** — surface it; don't default everything to max.
-
-**The one rule that keeps compression safe:** compress the *prediction*, never the *verification*. A
-mechanical item still verifies red→green with no regression and still logs to `RATIFICATION_LOG.md` —
-you skip the ceremony, not the proof or the record. That is the line between this and "just fix it":
-the audit trail survives.
-
-## The core loop — per owed behavior (prediction before reveal)
-
-This is the **full path** — for judgment / fork items. Mechanical items run the compressed subset
-(steps 4–6, with the fix stated up front instead of predicted). The order is the mechanism, borrowed
-from `/ratify`: **never show the analysis before the human predicts.**
-
-1. **Look.** The owner opens the named failing test and the seam it points at. No answer key yet.
-2. **Predict.** Before any reveal, the owner states, in their words: the fix, where it goes, and the
-   trap. This is the ownership beat — a fix you can predict is a fix you own.
-3. **Reveal & grade.** Show the seam analysis / answer-key. The delta is the discussion. Log the
-   outcome: `predicted` (a fast, earned yes) · `surprised` (had an expectation, the reveal
-   contradicted it) · `no-opinion` (couldn't form one — a *finding*, not a failure). Every `surprised`
-   / `no-opinion` gets a concrete reading pointer.
-4. **Build.** Direct the fix — prompt it, and Claude Code implements it at speed. You own it because
-   you *predicted and are directing* it, not because you typed it: name the change and its guardrail;
-   never hand over the wheel with a bare "just make it pass" (the low-ownership path this skill
-   replaces). Remove the deferred marker as the behavior lands.
-5. **Verify.** Run the suite. The target flips green **and** nothing that passed before regresses.
-   Red-then-green on the one test is the evidence — not prose that says it's fixed.
-6. **Gate.** Advance only on green. One item built-but-unverified at a time (WIP 1); don't stack fixes.
+1. **Name the trap.** Before writing the fix, state the non-obvious way a naive fix is wrong —
+   double-escaping, breaking an adjacent contract, a fix that greens the test while the behavior
+   stays wrong. Write it down. An agent that has articulated the trap tends not to walk into it, and
+   the owner reading the log later needs it more than you do.
+2. **Fix.** Make the change, named and guardrailed. Remove the deferred marker as the behavior lands.
+3. **Verify.** Run the suite. The target flips green **and** nothing that passed before regresses.
+   Red-then-green on the one test is the evidence — never prose that says it's fixed.
+4. **Gate.** Advance only on green. One item at a time (WIP 1); do not stack fixes.
+5. **Log.** Per item: the behavior, the trap, the fix, the evidence.
 
 **Marker discipline.** `xfail(strict)` is your ally: fix a behavior but forget to drop its marker and
-the now-passing test hard-fails (XPASS). That failure is not noise — it's the suite enforcing that a
+the now-passing test hard-fails (XPASS). That failure is not noise — it is the suite enforcing that a
 landed behavior gets un-parked. Never silence it by re-adding the marker.
 
-## Decision forks — full `/ratify`, then log
+## Decision forks — pick, log, surface
 
 An item with a real mechanism fork (dedupe vs refuse vs restructure; which of several valid designs)
-is not an execution item — it's a decision. Run the **full `/ratify` protocol**: set the scene in
-domain language, elicit the owner's expected mechanism *before* your recommendation, diff, and grade.
-Then:
+is a decision, not an execution item. **You do not halt for it.** Pick, and record it in declaration
+form — the decision, the options, what you took, what reversing it would cost including anything
+already escaped, and what you did not know.
 
-- Log the chosen mechanism as a new entry in the decision log (`docs/decision_log.md` or the repo's
-  equivalent), stating the fork and why — a mechanism chosen without a logged decision is a silent
-  fork, and silent forks are the thing.
-- If the test spec recorded a **"design amendment owed"** for this behavior, strike it now — the
-  amendment lands with the code, not after.
+- Log it in `docs/decision_log.md` with its `design-doc impact:` line. A mechanism chosen without a
+  logged decision is a silent fork, and silent forks are the thing this pipeline exists to kill.
+- **Surface every fork in the output.** The owner rules on them when they read the result — at the
+  gate's evidence stop, or in the batch if this ran unattended. A fork buried in a log nobody opens
+  has been decided by you.
+- Where a fork means the design itself has to change, say so plainly and route the amendment to the
+  design doc. A decision is not done until the doc it invalidates is updated.
 
-## Definition of Done — the gate
+## Running under a composite
 
-The skill is not done until **all** hold:
+When `/auto-build` invokes this step, nothing above changes — it was already autonomous. Forks are
+picked, logged, and carried into that run's batch instead of into the gate's evidence stop. Same
+records, later reading.
+
+## Definition of Done
+
+Not done until **all** hold:
 
 - The suite is **fully green with every deferred marker removed** — state the before/after counts
-  ("86 passed / 9 xfailed → 95 passed / 0 xfailed").
+  (*"86 passed / 9 xfailed → 95 passed / 0 xfailed"*).
 - **No previously-passing test regressed.**
-- **Every fork** taken is a logged decision; **every owed design amendment** is struck.
-- The **build-status / current-state doc** is advanced: this stage ✅, position → own-your-code.
-- An **ownership record** exists — predicted / surprised / no-opinion per item, plus each decision —
-  appended to `RATIFICATION_LOG.md` beside the artifacts, so the surprises carry forward.
+- **Every fork** is logged with its `design-doc impact:` line **and surfaced in the output**.
+- **Every owed design amendment** is struck.
+- `docs/build_status.md` is advanced: this step ✅, position → acceptance gate.
+- The **per-item record** exists — behavior, trap, fix, evidence — so the result is readable.
 
-Then, and only then, hand off: the Acceptance Gate reads the failure faces as the user, and
-`/own-your-code` inherits the surprise list as its study guide.
+Then, and only then, **chain into `/acceptance-gate`**.
 
 ## Anti-patterns it prevents
 
-- **Blind paste-execution** — fix-prompts fired in order without prediction. The correction that
-  created this skill.
-- **Uniform-max engagement** — running the full predict→reveal ceremony on mechanical items, spending
-  attention where nothing is at stake and killing the speed. Tier it (surfaced by the first run).
-- **Unearned green** — calling done on a suite you can't explain, or with markers still parked, or
-  with an XPASS silenced.
+- **The unexplained green** — a suite that passes with no account of what was wrong or why each fix
+  is right.
+- **Unearned done** — calling it finished with markers still parked, or an XPASS silenced.
 - **Silent forks** — a mechanism chosen without a logged decision.
-- **Scope drift** — editing a test to pass, or "fixing" code no failing test pins, instead of
-  building the ratified behavior.
-- **Owed-amendment rot** — a behavior lands but its design-doc/decision-log amendment never does.
+- **Scope drift** — editing a test to pass, or "fixing" code no failing test pins.
+- **Owed-amendment rot** — a behavior lands but the design-doc amendment never does.
+- **Halting on execution** — stopping to ask about a call the owner ratified the shape of at S5.
 
 ## Composes with
 
-- **`/test-spec`** (upstream) — consumes its must-index and owed amendments; honors its ratified scope.
-- **`/ratify`** (at every fork) — the decision-gate protocol; writes the shared `RATIFICATION_LOG.md`.
-- **`/acceptance-gate`, `/own-your-code`** (downstream) — the green command this produces is the gate's
-  bar; the ownership log is own-your-code's study guide.
-- **the build-status / current-state doc** — the canonical in-repo position tracker it advances.
+- **`/adversarial-review`** (the composite that reaches it) — sequences S5 → S6 → S7.
+- **`/test-spec`** (upstream) — its ratified must-cover index and owed amendments; honors its scope.
+- **`/acceptance-gate`** (downstream, chained) — the green command this produces is the gate's bar.
+- **`/retrace`** (optional) — the account of how the fixes went.
+- **`docs/build_status.md`** — the canonical in-repo position tracker it advances.
 
-## Notes
+## The kill rule
 
-- **Prediction before reveal, always.** A reveal-first fix is a weaker protocol even with the same
-  edit. Order is the mechanism.
-- **Owner directs the edits.** Claude Code does the building — at your direction, after your
-  prediction — so you keep its speed; the ownership is in predicting and directing, not typing. What
-  is forbidden is racing ahead to rewrite everything *before* you've predicted, then announcing a
-  green suite. Pairing is fine; abdication is not.
-- **Read-mostly on data.** It changes code (owner-directed), the decision log, the build-status doc,
-  and appends the ownership log — nothing else.
-- **Project-agnostic.** It reads whatever spec / decision-log / status doc a repo has, and degrades
-  gracefully when one is absent — say what's missing rather than assuming.
-- **Done = earned green, not drawn green.** The loop and its gates are the skill, not overhead. If the
-  owner is firing fixes without predicting, the skill is not running — the dialogue is.
+**The record is the ownership.** This step runs without the owner, which means the log is the only
+thing standing between them and a green light they have to take on faith. A run that greens the suite
+and leaves behind a summary rather than an account has not saved them work — it has moved the
+unexamined trust from the code into the report.

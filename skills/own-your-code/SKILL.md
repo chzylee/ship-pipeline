@@ -1,6 +1,6 @@
 ---
 name: own-your-code
-description: 'Turn an AI-built repo into an onboarding that confers ownership: a doc a fresh team member (or the original author, returning cold) reads to OWN the project — what it is and its current state, the core-component map, and each key decision justified so they can defend and evolve it. Organized top-down (what it is → core components → each component broken down, decisions nested and contextualized, never a flat catalogue). Selects and justifies decisions through the ownership lens that actually matters: maintainability, user experience, and cost. Includes the full data pipeline (first input → final output), a runtime/operational model, and a design→build drift check, in a compact, cockpit-first, low-cognitive-load format; real handoff docs get a final cross-model cold onboarding read (a fresh model validates the doc against its actual use case). Triggers on "own my code for X", "onboard me to X", "study guide for X project", "interview-prep my code", "help me own X", or after pushing updates. Re-runnable; disposable — regenerate after any change.'
+description: 'Turn an AI-built repo into an onboarding that confers ownership: a doc a fresh team member (or the original author, returning cold) reads to OWN the project — what it is and its current state, the core-component map, and each key decision justified so they can defend and evolve it. Organized top-down (what it is → core components → each component broken down, decisions nested and contextualized, never a flat catalogue). The bar is stepping back in comfortably: someone returns cold and can pick the project up and own it without re-deriving how it came to be. Decisions are selected and ranked by the RE-ENTRY lens — can the why be reconstructed from the source alone, how much else assumes it, and would a competent reader guess wrong — all readable properties, never a significance label, because how much a decision matters is the owner''s to judge and is never computed here. Works on ANY project: retraces and conformance reports are inputs if present, never prerequisites, and the same doc to the same bar must be producible from a codebase and nothing else. Includes the full data pipeline (first input → final output), a runtime/operational model, and a design→build drift check, in a compact, cockpit-first, low-cognitive-load format; real handoff docs get a final cross-model cold onboarding read (a fresh model validates the doc against its actual use case). Tier 1: one of the five skills that make up using Ship Pipeline, run after an increment the acceptance gate has proven rather than as a numbered step of the loop. Consumes docs/retrace/*.md for the why behind each decision, and the conformance reports for drift, rather than re-deriving either. Triggers on "own my code for X", "onboard me to X", "study guide for X project", "interview-prep my code", "help me own X", or after pushing updates. Re-runnable; disposable — regenerate after any change.'
 ---
 
 # Own Your Code
@@ -17,17 +17,20 @@ codebase, not consulting a catalogue that assumes you've already read the source
 ## What "own" means here (calibration — read this first)
 
 Not 100% line-level recall. That's the unrecoverable cost of not typing every line, and it
-is acceptable. Ownership = **enough mastery to justify and evolve the key decisions** — and
-**key decisions are the ones that move maintainability, user experience, and cost.**
-Architecture and the other pivotal choices matter precisely because they serve those three.
-If you can defend and grow a project on maintainability/UX/cost grounds, you own it well
-enough to ship, support, and scale it. Fall short and support gets harder, you need people
-to hold everything up, growth slows, things break. That trio is the bar this skill targets.
+is acceptable. Ownership = **enough mastery to justify and evolve the key decisions.**
+
+**The bar is stepping back in comfortably.** Someone returns to this project cold — a new
+teammate, or you six months later — and can pick it up and own it without re-deriving how it
+came to be. Everything in this doc is judged against that, and nothing else.
 
 **Success test.** A fresh engineer — or you, cold, months later — reads this and can: say
 what the project is and where it stands, hold its core-component map, and justify (and know
-how to evolve) each key decision on maintainability / UX / cost — all **without reading the
-code first.**
+how to evolve) each key decision — all **without reading the code first.**
+
+**It must work on any project.** A repo built through Ship Pipeline hands you retraces and
+conformance reports; most repos won't. Those are inputs *if present*, never prerequisites. The
+same doc, to the same bar, has to be producible from a codebase and nothing else — that is the
+test of whether this skill actually reconstructs ownership or merely transcribes a paper trail.
 
 ## Who it's for — write for a fresh teammate
 Calibrate to **an engineer who joined the team and inherited this repo from someone who has
@@ -40,33 +43,51 @@ end-user's name/identity and product-strategy asides (positioning, segment-vs-te
 out of the doc. A maintainer needs how it works and how to run it — over-specific targeting is a
 product judgment, not build ownership, and is out of scope here.
 
-**Where the output lives — the wiki, not the README.** The project's `README` is the
-user/public front door (what it is, how to use it). This skill's output is the **internal
-engineering wiki**: the onboarding that confers ownership of the *build*. Different readers,
-different jobs — don't collapse them, and don't restate the README. Assume the reader can read
-the README for usage; spend this doc on why the code is the way it is and how to evolve it.
+**This is not the README.** The project's `README` is the user/public front door (what it is, how
+to use it). This is the **internal onboarding** that confers ownership of what was built. Different
+readers, different jobs — don't collapse them, and don't restate the README. Assume the reader can
+read the README for usage; spend this doc on why the code is the way it is and how to evolve it.
+Where it lives is settled below under *Output target*: the repo.
 
 ## Scope — hold this line
 Owns the **built artifact**: what it is, how it's structured, why each part is built that
 way, and where the build drifted from its design. It does NOT own the upstream idea/problem
-decisions — those belong to the design phase (e.g. `/office-hours`) and a decision/Judgment
+decisions — those belong to the design phase (`/design-doc`) and a decision/Judgment
 Ledger, which this skill *consumes* (to confirm rationale and detect drift), not reproduces.
 
-## The ownership lens — threads through everything
-A decision is **key** when it materially moves **maintainability, UX, or cost** — or
-forecloses future growth. (Security, correctness, and architecture feed these; name them in
-those terms.) Use the lens three ways:
-- **Selection / tiering:** full treatment for decisions that move those three; confirm-form
-  (one line) for the rest; omit true trivia. The filter is not "chose over an alternative,"
-  it's "would a wrong call here cost maintainability, UX, or money."
-- **Justification:** every key decision's "why" ties to its component's role AND its
-  maintainability/UX/cost consequence.
-- **Growth:** for each, note what it constrains or enables for future evolution (load-bearing
-  vs cheap-to-change) — because ownership includes knowing how to grow it.
+## The re-entry lens — threads through everything
+
+A decision is **key** when not knowing it would **obstruct someone stepping back in**. Rank on
+three properties, all readable from the code and the repo:
+
+- **Reconstruct** — can the *why* be re-derived from the source alone? If it cannot, the doc
+  must carry it. This is the highest-value axis, because it is precisely what a returning owner
+  lacks and cannot get anywhere else.
+- **Reach** — how much else assumes this choice. A decision three other things are built on
+  has to be understood before any of them can be touched.
+- **Surprise** — would a competent reader's first guess be wrong? A counter-intuitive choice
+  left unexplained gets "corrected" by whoever comes next.
+
+**This ranks what the DOC must carry, not what matters to users.** Impact on how the thing gets
+used is the owner's to judge and is never computed here. All three properties above are
+readable; whether the owner cares is not, and is not yours to assert.
+
+Use the lens three ways:
+- **Selection:** full treatment for decisions that score on any of the three; confirm-form (one
+  line) for the rest; omit true trivia. The filter is not "chose over an alternative," it is
+  "would someone coming back cold get stuck here."
+- **Justification:** every key decision's "why" ties to its component's role and to what a
+  returning owner would otherwise have to reconstruct.
+- **Growth:** for each, note what it constrains or enables (load-bearing vs cheap-to-change) —
+  ownership includes knowing how to grow it, not just how it works.
+
+**The doc's own usability is part of the bar.** A complete document nobody can navigate has
+failed the same test as an incomplete one. Cognitive load is a correctness property here, not a
+polish item — see the format contract below.
 
 ## When to run
 On demand, and again after any code change. **Disposable — regenerate, never hand-maintain.**
-(Regeneration overwrites the single wiki doc in place, refreshing its "current state" block.)
+(Regeneration overwrites `docs/own_your_code.md` in place, refreshing its "current state" block.)
 
 ## Output format — the cognitive-load contract
 High-volume ownership, delivered compact. Structure over prose:
@@ -75,8 +96,9 @@ High-volume ownership, delivered compact. Structure over prose:
 - **Structure-first:** tables, a component map, flow diagrams, checklists, status markers.
   Prose only for genuine reasoning; no unbroken prose block beyond ~4 sentences.
 - **Progressive disclosure:** Markdown top summary + collapsible `<details>` per section;
-  Notion toggles + page tree. Skim to orient, expand to own.
-- **Markers:** per decision — `OWNED`/`REVISIT`, a **maint/UX/cost** tag, and certainty
+  Skim to orient, expand to own.
+- **Markers:** per decision — `OWNED`/`REVISIT`, a **re-entry** tag (`reconstruct` / `reach` /
+  `surprise`, whichever apply), and certainty
   `[code]` (verified in source) / `[doc]` (rationale confirmed in a decision log/ADR) /
   `[likely-why]` (reconstructed, verify) / `[reconsider]` (judgment). Never present a
   reconstructed rationale as confirmed history.
@@ -88,26 +110,31 @@ High-volume ownership, delivered compact. Structure over prose:
   that *look* like real jargon but aren't (a reader who googles them gets nothing) — replace them
   with a plain description plus the file/symbol they refer to.
 
-## Output target — the project wiki, single source
-The **Notion project wiki is the home of every pipeline deliverable** — one copy, not a repo file
-plus a wiki archive. own-your-code writes there and **does not write a local `OWN_YOUR_CODE.md`**
-(a repo copy would only drift from the wiki source).
-- **Resolve the wiki** from **`docs/notion.json`** (`wiki_url`) at the target repo root — the repo's
-  committed pointer to its Notion wiki; if absent, search Notion by project name, and on a miss ask
-  the owner to add `docs/notion.json` rather than guessing a destination. No Notion access this run
-  (headless/cron)? Emit the doc content and say where it belongs — never silently fall back to a repo file.
-- **One living, top-level doc, regenerated in place.** own-your-code is *the current ownership of the
-  whole project* — disposable, always-current, one meaningful read — so it is a **single page directly
-  under the project's wiki page** (a project-level deliverable, NOT one per build version), titled
-  `Own Your Code — {Project}`, **overwritten on each regenerate**. Do not stack per-run archive pages;
-  version history is the Notion page's own history. Leave a pointer to it from a build's deliverable
-  ladder if that build wants the ownership capstone in view. Optionally a Decisions database so
-  `OWNED`/`REVISIT` + the maint/UX/cost tags roll up across projects.
+## Output target — the repo, single source
+**The repo is canonical.** Write `docs/own_your_code.md` in the target repo, in version control,
+alongside every other pipeline artifact. Spec, tests, decisions, and ownership share one home and one
+history, so they cannot drift.
+
+- **One living, top-level doc, regenerated in place.** This is *the current ownership of the whole
+  project* — disposable, always-current, one meaningful read. It is a **single file**, a
+  project-level deliverable and **not one per increment**, overwritten on each regenerate. Do not
+  stack per-run archive files; version history is git's job.
+- **A wiki is a derived surface, never a second canonical.** If a project wants a teammate-readable
+  copy, publish a dated snapshot that names `<repo>/docs/own_your_code.md` as its source. An
+  *editable* copy anywhere else is the exact thing that makes a later run read the wrong file. Do not
+  create one.
 - **Stamp every output** — put `own-your-code v{VERSION} · {YYYY-MM-DD}` in the generated header, so
   a doc always declares which skill version produced it.
 
 ## Step 1 — Read to ONBOARD, not to catalogue
-Read enough to reconstruct the project for someone with zero context:
+
+**Start with the retraces.** `docs/retrace/*.md` holds per-increment accounts of how the work
+actually went and why the moves were made — including the wrong turns. That is the raw material this
+skill consolidates, and reading it beats re-deriving the same history from the diff. Retraces are
+**non-binding**: they report what happened, they never establish a requirement, and nothing here may
+cite one as authority for a behavior. Use them for *why*, and confirm every *what* in the source.
+
+Then read enough to reconstruct the project for someone with zero context:
 - **What it is / does / current state:** purpose, the user, what stage it's at, what's in flight.
 - **Domain jargon:** collect the acronyms, proper nouns, and external systems a newcomer won't
   know (especially in a domain you delegated to the AI) — they become the domain primer.
@@ -118,7 +145,7 @@ Read enough to reconstruct the project for someone with zero context:
   in what *form* (file type, format, size) — through each transformation to the final output. The
   full data pipeline, distinct from the control flow.
 - **Decisions per component:** for each component, the calls made inside it; flag the
-  AI-defaulted / undocumented ones and, via the lens, the ones that move maint/UX/cost.
+  AI-defaulted / undocumented ones and, via the lens, the ones a returning owner would trip on.
 - **Drift inputs (if present):** design doc, decision/Judgment Ledger, ADRs, CLAUDE.md —
   prefer these over older specs.
 - **No access:** ask for the key files; don't guess.
@@ -129,7 +156,7 @@ Read enough to reconstruct the project for someone with zero context:
 - **Domain primer (only if the domain has non-obvious jargon).** A compact glossary — the
   acronyms, proper nouns, external systems, and core concepts a reader needs *before* the lines
   below parse (expand every initialism once). A **bulleted definition list**, not a table (tables
-  compress and render poorly, e.g. in Notion) — a handful of entries, one line each. Skip for
+  compress and render poorly) — a handful of entries, one line each. Skip for
   plain/familiar domains; don't gloss a generic CRUD app.
 - **What it is + does + who for** (≤5 sentences).
 - **Current state / what you're returning to:** stage, what's done, what's in flight, last
@@ -140,8 +167,8 @@ Read enough to reconstruct the project for someone with zero context:
   logic: how it finds X, what it does with my input, what it's judging). Keep it **legible**:
   favor a top-down / two-track flow over fragile 2-D ASCII (misaligned monospace art is worse
   than a clean vertical list). Label each box with what it does; tag components so §2/§4 anchor.
-- **Decisions index:** compact table — `# | decision | component | lens (maint/UX/cost) | tier | your call | cert`. Navigation + the Notion DB roll-up; full treatment lives under each component.
-- **Where to spend attention:** the top gaps / biggest maintainability-UX-cost risks.
+- **Decisions index:** compact table — `# | decision | component | re-entry (reconstruct/reach/surprise) | your call | cert`. Navigation only; full treatment lives under each component. **No significance column** — the lens says why a decision is in the doc, never how much it ought to matter to you.
+- **Where to spend attention:** the top gaps — the decisions most likely to strand someone coming back cold.
 
 ### 2. The system — core components + how they connect
 Assembled **whole** (do NOT scatter this across the decision sections):
@@ -165,32 +192,40 @@ flat catalogue. For every core component:
 - **Role** — what it does and which part of "what the app is/does" it serves.
 - **How it works** — the local mechanism, first-principles (not API).
 - **Key decisions inside it** — each: the call (file/symbol ref) · **why**, tied to the
-  component's role AND its **maintainability/UX/cost** consequence · for the ones you don't
+  component's role AND **what a returning owner would otherwise have to reconstruct** · for the ones you don't
   yet own: the option landscape (real alternatives on the axes; a table) + a rebuild path;
   for the ones you do: confirm-form (one line) · **would I make this call again** — framed as
-  the maintenance/UX/cost risk if it was wrong.
+  what a returning owner runs into if it was wrong.
 - **Growth** — what this component's shape constrains or enables for future evolution
   (load-bearing vs cheap-to-change).
-Tier the depth via the lens: spend it where maintainability/UX/cost live and where AI made the call.
+Vary the depth via the lens: spend it where the why cannot be reconstructed, where reach is wide, where
+a reader would guess wrong — and wherever an agent made the call and nobody ruled on it.
 
 ### 5. Drift — built vs design (only if drift inputs exist)
-Flag where the build diverged from the design doc / ledger: a swapped approach, a dropped
-guard, unplanned scope. Drift is the top ownership-corroder — you can't own "as if I built
-it" if it quietly diverged and you never saw it. If no design artifact exists, skip and say so.
-**Drift means built-vs-design, never built-vs-build-plan.** The plan is advisory — a build that
-reordered, merged, or abandoned planned increments while still satisfying the design has not
-drifted; do not report it. Only report divergence from what the design requires.
+**Read the conformance reports first if they exist.** An independent fresh-context agent already
+checked each increment against its design doc in both directions — creep (built but never specced)
+and gap (specced but never built). Consolidate what it found; do not re-derive it here, where you
+have neither its isolation nor its focus. Re-deriving it produces a second, weaker answer to a
+question already answered.
+
+Where no conformance report exists, flag divergence yourself: a swapped approach, a dropped guard,
+unplanned scope. Drift is the top ownership-corroder — you can't own "as if I built it" if it
+quietly diverged and you never saw it. If no design artifact exists, skip and say so.
+**Drift means built-vs-design, and nothing else.** The design doc is the only binding artifact;
+ordering and grouping are planning activity nobody records. Work that was sequenced or split
+differently than anyone imagined, while still satisfying the design, has not drifted — do not report
+it. Only report divergence from what the design requires.
 
 ### 6. Gaps ranked
 Where ownership is thinnest, ranked on the axes that matter: which key decisions you cannot
-yet justify on maintainability / UX / cost, and which runtime behaviors you couldn't debug
+yet justify, and which runtime behaviors you couldn't debug
 cold. Both decision and operational gaps.
 
 ### 7. Own it — the active pass
 Reading the doc gives reading-ownership; this section converts it to owned. Three moves, in order:
 - **Code to review (targeted reading list).** Not the whole repo — the bounded set (≈5–10) of
   spots where reading the *actual source* earns the most ownership: load-bearing decisions you
-  can't yet justify, AI-defaulted calls that move maint/UX/cost, drift sites, and the
+  can't yet justify, agent-defaulted calls nobody ruled on, drift sites, and the
   golden-path core. Rank them; per spot give the file/symbol and **what to look for**. State
   explicitly what you can trust from this doc and skip — the point is a short list of where
   your own eyes are worth it, not "read everything."
@@ -199,7 +234,7 @@ Reading the doc gives reading-ownership; this section converts it to owned. Thre
   extension. Per change: the edit and **the ownership it buys**. This is doing-ownership — it
   closes what reading alone can't.
 - **Drills.** Onboarding check (from this doc alone, could a stranger say what it is, draw the
-  component map, and justify the top 3 decisions on maint/UX/cost?); runtime cold-trace (trace
+  component map, and justify the top 3 decisions?); runtime cold-trace (trace
   one input end to end naming each component — "it broke here, first check?"); one run-it-cold.
 
 ## Final step — the cross-model onboarding read (default for real handoff docs; T2–T3)
@@ -232,7 +267,7 @@ most reviews, where a memory-carrying reviewer is needed to preserve the goal.)
   when a different lineage is one key-check away, take it.
 - **What the reviewer does.** Give it the **doc text only, never the source** (the point is "can you
   onboard *from the doc*"). Have it (a) run the success test — say what it is, draw the component
-  map, justify the top 3 decisions on maint/UX/cost, and from the doc alone *locate and describe the
+  map, justify the top 3 decisions, and from the doc alone *locate and describe the
   shape of the fix* for one named bug — and (b) emit `/sharpen`-style reader-side reflection:
   **Least confident / loose ends** (where it lost the thread, guessed, or couldn't follow) +
   **Most needed** (what would let it fully onboard).
@@ -249,8 +284,8 @@ most reviews, where a memory-carrying reviewer is needed to preserve the goal.)
 
 ## Notes
 - **Read-only** on code and data. Never modify either.
-- **Calibrate to senior** — don't re-explain fundamentals; spend depth on the key (maint/UX/cost)
+- **Calibrate to senior** — don't re-explain fundamentals; spend depth on the key
   and AI-defaulted calls.
 - **Disposable** — regenerate after any change; regeneration writes every target, so targets never drift.
 - The bar for every section: could the reader now **own** this — justify and evolve it on
-  maintainability / UX / cost — without the code in front of them?
+  — without the code in front of them?

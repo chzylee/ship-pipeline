@@ -1,182 +1,211 @@
 # Ship Pipeline
 
-**A guided build process that keeps senior-engineer ownership in LLM-speed development.**
+**A spec-driven process for building software with agents, operated as a set of Claude Code skills.**
 
-LLMs hand you build velocity; what they quietly take is the act of coding itself — and with
-it the things seniority is made of: knowing why every decision was made, what "done" actually
-means, whether the build honors the design, and being able to defend and evolve the result.
-Skip those and you ship faster right up until you can't support, explain, or grow what you
-shipped.
+It does not write code and it does not decide what to build. It decides one thing, repeatedly, and
+makes the answer visible:
 
-Ship Pipeline is that seniority, put back in as **process**. It guides a build from design
-through shipping with clarity on what's going on at every stage, and it generates the
-documentation as it goes — so you (or anyone below staff-level expertise, or anyone who just
-didn't type the code) can build at LLM speed **and own the result**: every deliverable is
-paired with a verifier that binds it to its source, "done" is a command that passes rather
-than a feeling, and the trail it leaves is the onboarding a teammate could pick up cold.
+> **Is this spec specific enough that an agent can execute it without making decisions the owner
+> would have wanted to make?**
 
-## The pipeline
+The failure it exists to prevent: *building something massive, finding an issue, and now you have to
+go back and make a ton of changes.*
 
-| # | Stage | What it produces | What verifies it |
-|---|-------|------------------|------------------|
-| 0 | Sourcing & Scope Gate — find what to build, harden it (methods: Scout · Sidequest · office-hours) | a Build Brief + lane declaration, hardened into the one job / definition of done / not-in-v0 list | method-matched: Reality Probe (main lane) · black-box test + greenlight (sidequest lane); the segment / one-job / kill checklist |
-| 1 | Design Doc (`/design-doc` — `derive` a version/feature slice · `sync` a doc to current state) | **the truth** — the canonical spec everything traces to, as addressable units | design review at the idea↔design seam; the nine staleness checks |
-| 2 | Build Plan | a **recommendation**: shared whole-design context + a proposed increment ordering with per-increment build prompts, sized to the owner's prediction span | anchor coverage (increments' union = the whole design) + cross-model cold read (or a two-build bake-off) |
-| 3 | ⟳ Build Loop | the code, one increment at a time — the increment you judge is next, which need not be the plan's: build → `/test-spec` slice → tests made real (reds = decisions still owed) → `/finish-build` drives reds green → ratify gate → commit; WIP 1 | per increment: slice tests green + the owner's verify act (predict-then-run · break-it-on-purpose · change-one-thing), logged |
-| 4 | Build Review | code ↔ design reconciliation of the assembled whole; the plan is reconciled to what was actually built | fresh judge: six checks → judgment + blockers |
-| 5 | Test Sweep | version-level Test Spec: the seams between increments, the end-to-end scenario, the gap audit vs. the whole design; unmet MUSTs parked `xfail(strict)` | every item anchored to the design, bounded by not-in-scope |
-| 6 | Acceptance Gate | the verdict that the build is DONE: the one command green on a clean checkout | leg-checklist administered by `/acceptance-gate` — `/finish-build` discharges parked `xfail` legs; failure paths, documented path, the owner's evidence-read, the human legs |
-| 7 | Own Your Code | onboarding that confers ownership | re-derive a decision cold |
+**Who it's for.** A developer who builds with agents and remains responsible for the result — who
+must be able to explain, defend, and evolve software they did not type. Not a manager approving
+work, and not a user of a finished product: the person on the hook.
 
-**Gates are leg-checklists, not single events.** A gate passes leg by leg; a leg that can't pass
-now is *deferred* and must name the later step that discharges it. The Acceptance Gate's
-automated-suite leg is discharged by `/finish-build`, which drives the ratified-but-deferred
-behaviors (committed as `xfail(strict)`) to green. So **"build complete" is not "suite green"** — a
-suite can be green while MUST behaviors sit parked under `xfail`. Build complete = every MUST leg
-built-and-green *or* consciously demoted-and-logged (a demotion is a ratified decision, never a
-quiet edit), every deferred marker removed, nothing regressed. That is the exit criterion into Own
-Your Code.
+## The loop
 
-**The design is truth; the plan is a recommendation.** Only the Design Doc is binding — it is the
-comprehensive statement of what you actually want built, and every test, review, and gate traces to
-it. The Build Plan is one viable *way* to get there, written before the build taught you anything.
-Building changes what you know, so the plan is expected to go stale: **deviating from it is not a
-violation and needs no permission.** Build the increment that makes sense to you next, in the shape
-that makes sense once you're in the code. What the pipeline asks is not "does this fit the plan?"
-but **"does this serve the design?"** — the only question a gate is allowed to block on.
+Work is done in **increments**. One increment is one scoped thing to build, one design doc, one pass
+through seven steps.
 
-The plan is settled up *after* the fact, not defended during it:
+| Step | What happens | Who |
+|---|---|---|
+| **S1** | spec it, and approve it | **owner** |
+| **S2** | an agent builds — tests first, seen failing, audited while the code is written | agent |
+| **S3** | a fresh agent checks the result against the spec, both directions | agent |
+| **S4** | review the findings | **owner** |
+| **S5** | spec what must be protected against | **owner** rules, agent proposes |
+| **S6** | drive it to green | agent |
+| **S7** | sign off | **owner** |
 
-- **In the loop (stage 3)** — build uninhibited. Note deviations in passing; don't stop to re-plan,
-  and never re-shape the code to fit a stale increment boundary.
-- **At Build Review (stage 4)** — **reconcile**: walk the plan against what exists, mark each
-  increment built / built-differently / dropped / still-owed, and rewrite the remaining ordering to
-  start from reality. Only two things are real findings here: work the **design** requires that
-  nothing built covers, and work built that the **design** doesn't ask for. A plan/code mismatch
-  where the design is satisfied is bookkeeping, not a defect.
-- **After reconciliation** — the owner optionally reworks the forward plan. Optional: a reconciled
-  plan whose remainder still reads sensibly needs no rewrite.
+**S2-S3 run without you, as do S6's fix cycles.** Your touchpoints are S1, S4, S5, S7 — and each is a
+judgment, never a transcription task.
 
-A deviation that changes *what gets built* rather than *the order it's built in* is a design
-change, not a plan deviation — that goes back to the Design Doc through `/ratify` and is logged in
-`docs/decision_log.md`. This is the one line the doctrine holds: the plan bends freely, the design
-bends only on the record.
+**Two promises, not one.** An increment that passes S3 is **conformant**: it does what was described.
+Only one that passes S7 is **trusted**: it survived deliberate scrutiny. An initial build makes what
+is described work; it does not promise robustness against cases nobody enumerated.
 
-You can enter at any stage — each skill establishes the handshake with the stage before it. The
-sourcing methods are optional front doors within stage 0: `/scout` when you don't have an idea yet
-(main lane) · `/sidequest` to source low-ownership builds for autonomous runs (sidequest lane);
-with an idea already in hand, begin at the Scope Gate half of stage 0.
+**Two loops with opposite polarity.** Rework at S2-S4 is a *defect* — its target is zero, and its
+count measures whether the spec did its job. Iteration at S5-S7 is the phase *working as intended*
+and says nothing about spec quality. A system that cannot tell them apart reads its own history
+backwards.
+
+## Your first increment
+
+Three commands, in this order, in your own repo:
+
+```bash
+claude
+```
+
+```text
+/design-doc      # S1 — derive the increment spec, read the declaration, approve it
+/build-and-test  # S2-S4 — it dispatches the builder and both checks, then shows you the findings
+/adversarial-review  # S5-S7 — spec the holes, drive to green, gate it
+```
+
+That's one increment. Then `/own-your-code` when you want the ownership doc, or `/auto-build`
+instead of the middle two when you want the whole thing to run unattended.
+
+**Do you need a project-tier `DESIGN.md` first?** No. `/design-doc` will offer to derive one, and an
+increment doc can stamp `scope authority: none — authored here` when there is nothing above it. On a
+project you expect to run more than a couple of increments through, derive the project doc first —
+it's what the increments trace to.
+
+## The declaration
+
+Before you approve at S1, an agent that has **never seen the conversation that produced the spec**
+reads it cold and enumerates every decision it would have to make to execute it. Each entry:
+
+```
+decision:  what it would have to choose
+options:   what it would be choosing between
+taking:    which it would take absent a ruling
+reversal:  in plain language, what undoing this looks like if it is wrong
+           — including anything already escaped (data written, calls made)
+unknowns:  context it believes it lacks and would want before deciding
+```
+
+**No severity field, ever.** An agent can estimate what reversing something costs — how far it
+spread, whether anything escaped, what else locks to it. It cannot estimate whether you'd *care*,
+because that lives in what you value and exists nowhere in the code. So the system surfaces the bill
+and never tells you whether to pay it.
+
+Signing attests that the items on the list are ruled correctly. It does not attest that the list is
+complete, and completeness is not gated on.
+
+## Skills
+
+**Tier 1 — this is what using Ship Pipeline means.** Five skills. You do not need to learn any others.
+
+| Skill | Step | |
+|---|---|---|
+| `/design-doc` | S1 | v0.6.0 — derive the binding spec in a session, or sync a stale one. Dispatches `declare`, runs the scope check, presses on one test: *would a wrong build still pass this sentence?* |
+| `/build-and-test` | S2-S4 | v0.2.0 — the harness. Dispatches the build agent, gates tests-red-before-implementation, runs the audit concurrently and conformance after, presents the findings and the rework count |
+| `/adversarial-review` | S5-S7 | v0.3.0 — the hardening phase as one entry: spec the holes, drive to green, gate it |
+| `/auto-build` | S1-S7 | v0.4.0 — run the whole increment unattended against a spec you approved; every decision it made comes back as a proposed design-doc amendment you rule on |
+| `/own-your-code` | after | v2.4.0 — the onboarding that confers ownership, regenerated in place |
+
+**Tier 2 — the machinery.** Individually callable, never required knowledge.
+
+| Skill | Reached by | |
+|---|---|---|
+| `declare` | `/design-doc` | v0.2.0 — cold-reads the spec and enumerates what it would have to choose |
+| `audit-tests` | `/build-and-test` | v0.1.0 — would these tests catch a wrong build? Names the wrong build that survives each weak one |
+| `conformance` | `/build-and-test` | v0.1.0 — creep and gap, reported separately |
+| `/test-spec` | `/adversarial-review` | v0.7.0 — the adversarial spec for one increment, agent-proposed and owner-ruled. This is where `/ratify` is baked in |
+| `/finish-build` | `/adversarial-review` | v0.3.0 — drives parked `xfail` legs to green, autonomously, logging the trap and evidence per fix |
+| `/acceptance-gate` | `/finish-build` | v0.4.0 — the leg-checklist that decides done |
+| `/retrace` | `--retrace` on either harness | v0.2.0 — how the agent actually worked, wrong turns included. Supplementary; off by default |
+| `/ratify` | every approval stop | **external** — see Dependency below |
+
+**Add-ons, on their own clock.** `/scout` (v2.0) discovers what to build from a person and their real
+work; `/sidequest` (v0.1) sources low-ownership builds. They feed S1's input; they are not steps of
+the pipeline, which takes one scoped thing at a time and does not ask where it came from.
+
+## Composition, and why it's safe
+
+**One repeatable action, one skill.** The pipeline is the orchestration of them, and composites like
+`/adversarial-review` and `/auto-build` exist because grouping by *stage of the process from your
+point of view* is better UX than making you remember eight names.
+
+**Running a composite that spans an approval point IS the approval for it** — delegation is itself a
+signed decision, and it is legitimate precisely because you choose it per increment rather than
+configuring it once. What makes that honest is the other half: **a composite must surface everything
+it passed through.** One that hides its decisions is ok-clicking at a higher altitude.
+
+**Permission scope is yours.** An unattended run needs your Claude Code permission settings
+configured for the commands it will actually run — the test suite, a clean-checkout clone, whatever
+the build touches. No skill here manages, requests, or widens permissions; that would be a tool
+deciding its own reach. Set it before you launch an overnight run, or it will stop at the first
+prompt and wait.
+
+**Nothing here can refuse you.** You may elect to run autonomously and knowingly accept the risk.
+`/auto-build` may report that a spec looks thin; it may not decline to run it. A system that can
+override the owner's accepted risk has taken authority it does not have. Every mechanism informs a
+choice; none of them may make one.
 
 ## What each run carries in-repo
 
-The pipeline's state, decisions, and provenance live in the **project's own repo**, so a cold clone
-is self-describing — no one reconstructs "where is this and how did it get here" from chat, memory,
-or a wiki. Each fact has one home and is handed forward to the stage that consumes it:
+State, decisions, and provenance live in the **project's own repo**, so a cold clone is
+self-describing. Each fact has one home.
 
-| Artifact | Lives at | Source of truth for | Handed forward to |
-|----------|----------|---------------------|-------------------|
-| Position + stage map + gate legs | `docs/build_status.md` | where this project is in the pipeline | anyone cloning · `/own-your-code`'s current-state · advanced by `/finish-build` |
-| Build Plan (advisory) | `docs/build_plan.md` | the *recommended* route through the design — never what's binding | the build loop as a suggestion · reconciled to reality at Build Review |
-| Ratified test contract | `TEST_SPEC.md` | what must be true to trust the build | `/finish-build` (its legs) · Acceptance Gate |
-| Code/build decisions (each fork + why) | `docs/decision_log.md` | why the build is the way it is | `/own-your-code` drift check · `/finish-build` logs forks here |
-| Ownership record (`predicted`/`surprised`/`no-opinion`) | `RATIFICATION_LOG.md` | demonstrated judgment + blind spots | `/own-your-code` study guide |
-| Driving prompt per step | `docs/prompts/NN-<step>.md` | provenance / retrace of each step | audit of a fast or back-filled build |
+| Artifact | Lives at | Source of truth for |
+|---|---|---|
+| Project design | `DESIGN.md` | what the project is intended to become |
+| Increment design | `docs/design/<increment>.md` | what this one pass builds |
+| Position + gate legs | `docs/build_status.md` | where this project is |
+| Ratified test contract | `TEST_SPEC.md` | what must be true to trust it |
+| Decisions + forks | `docs/decision_log.md` | why it is the way it is |
+| Ownership record | `RATIFICATION_LOG.md` | demonstrated judgment + blind spots |
+| Audit + conformance findings | `docs/checks/<increment>.md` | what the S2-S3 checks found, and the rework count |
+| **Ownership doc** | `docs/own_your_code.md` | **the deliverable that matters** — what lets someone step back in and own the project |
+| Retraces | `docs/retrace/<increment>.md` | how the agent worked. **Supplementary**, non-binding, off by default |
 
-**Repo owns run-state; the wiki owns the process.** The repo is the single source of truth for
-*this build* — position, decisions, provenance, ratification. The Ship Pipeline wiki is the single
-source of truth for the *generic process* — stage definitions and how-tos — and holds no project's
-position; skill maturity lives in the Skills table below, not restated on the wiki. Two homes for
-one fact is drift: retire any per-project "current state" wiki page in favor of `build_status.md`.
+**The repo is canonical.** A wiki restates; it does not decide. Where a wiki disagrees with these
+files, these files are right and the wiki is stale.
 
-**Changelog boundary:** the Notion Changelog records changes to the pipeline's *stage documents*;
-the repo's `decision_log.md` records decisions about the *code/build itself*.
+**Two doc tiers and no more** — project and increment. Nothing binding sits between them. Version,
+feature, and milestone are planning labels this system does not model; decomposing a project into
+increments is your activity, not the system's.
 
-**The `design-doc impact:` line — the drift fix.** Every `decision_log.md` and `RATIFICATION_LOG.md`
-entry carries a `design-doc impact:` line: `none`, or the design unit/section it changed. A decision
-is not done until the doc it invalidates is updated. Drift is normal — details get ironed out in code
-faster than in the spec, and the spec is the one artifact with no immediate consumer, so nothing
-breaks *today* when it goes stale. What breaks is the next agent, which has no memory and takes the
-stale doc as truth. The impact line is the write-time catch that keeps a recorded decision from
-rotting the doc it contradicts; `/design-doc sync` is only the backstop for when it's missed. On
-Runway v1, fourteen drifts were all faithfully *recorded* and *none* propagated — capture worked,
-routing didn't exist. This line is the routing.
+### The `design-doc impact:` line — the drift fix
 
-**The framework ships the catch — you don't wire it per project.** Keeping the build viable to the
-design is the pipeline's whole point, so the enforcement lives in the pipeline, not in each repo's
-settings. Ship Pipeline ships a `PostToolUse` hook ([`hooks/impact-line-reminder.sh`](hooks/impact-line-reminder.sh))
-that fires on any edit to a `decision_log.md` or `RATIFICATION_LOG.md` and, when the change carries
-no `design-doc impact:` line, nudges the model to add one and propagate. It is scoped by artifact
-name (inert in every other repo and on every other file), non-blocking (a reminder, never a wall),
-and dependency-free (POSIX `sh` + `grep`, so it runs in Git Bash on Windows and any POSIX shell
-elsewhere). Plugin-mode installs load it automatically from `hooks/hooks.json`; bare-skill installs
-add the one hook to `~/.claude/settings.json` (snippet in [Install](#install)).
+Every `decision_log.md` and `RATIFICATION_LOG.md` entry carries a `design-doc impact:` line: `none`,
+or the design unit it changed. **A decision is not done until the doc it invalidates is updated.**
 
-The `docs/build_status.md` skeleton — the one place "where am I" is answered:
+Drift is normal and predates AI — details get ironed out in code faster than in the spec, and the
+spec is the one artifact with no immediate consumer, so nothing breaks *today* when it goes stale.
+What breaks is the next agent, which has no memory and takes the stale doc as truth. On the one
+project where this has been measured so far, drifts were faithfully *recorded* and none
+*propagated* — capture worked, routing didn't exist. That's thin evidence, and the mechanism is
+cheap enough to be worth running anyway. This line is the routing, and `/design-doc sync` is only
+the backstop for when it's missed.
+
+**The framework ships the catch.** A `PostToolUse` hook
+([`hooks/impact-line-reminder.sh`](hooks/impact-line-reminder.sh)) fires on any edit to a
+`decision_log.md` or `RATIFICATION_LOG.md` and nudges for the impact line when it's absent. Scoped by
+artifact name (inert everywhere else), non-blocking, and dependency-free (POSIX `sh` + `grep`).
+Plugin installs load it from `hooks/hooks.json`; bare-skill installs add it to `settings.json`
+(snippet below).
+
+The `docs/build_status.md` skeleton:
 
 ```markdown
 # Build Status — <project>
 
-Pipeline: 0 Sourcing & Scope · 1 Design · 2 Build Plan · 3 ⟳ Build Loop · 4 Review · 5 Test Sweep · 6 Acceptance Gate · 7 Own Your Code
-Position: **6 · Acceptance Gate** (in progress)
+Increment: **<name>**
+Steps: S1 spec · S2 build · S3 conformance · S4 review · S5 adversarial spec · S6 green · S7 gate
+Position: **S7 · Acceptance Gate** (in progress)
+Rework count (S2-S4): 0
 
-## Gate legs — 6 · Acceptance Gate
-- [x] Scenario A — human pass, <date>
-- [x] Scenario B — human pass, <date>
-- [ ] Automated-suite leg — deferred → /finish-build (N MUST behaviors parked as xfail-strict)
+## Gate legs — S7
+- [x] One command green on clean checkout — <date>
+- [x] Failure paths triggered — <date>
+- [ ] Real-user read — deferred → <name>, <date>
 
 ## Log
-- <date> — advanced to <stage>: <one line>
+- <date> — advanced to <step>: <one line>
 ```
 
-## Skills
-
-Skills are forged from real ships and land here as they prove out — this repo is harvested,
-not built ahead.
-
-| Skill | Status |
-|-------|--------|
-| `/scout` | **Available** (v2.0) — the front door: inverted office-hours that discovers what to build from a person + their real work → a Build Brief |
-| `/design-doc` | **Available** (v0.4.0) — stage 1's skill, in two UX shapes. `derive` is a **session skill** carrying the baked **Software architect** persona: it walks scattered inputs (no required parent; each ranked by what it is authoritative *for*) to a doc that binds, pressing **by tier** on one test — *would a wrong build still pass this sentence?* Modes: Owner-reviewed (default) · Unattended build (explicit entry only; exit gate is a cold subagent read). `sync` is **fast-mechanical**: bootstrap a pre-schema doc, then apply the design decisions made since the last edit via nine staleness checks in both directions — build-ahead and doc-ahead — amending the doc **body**, not just a log; a tooling failure is never reported as drift. Design, never ordering — sequencing belongs to `/build-plan`. First proven on a real `sync` of Runway v1 (2026-07-23) |
-| `/own-your-code` | **Available** (v2.1.0) — turn an AI-built repo into an onboarding that confers ownership |
-| `/test-spec` | **Available** (v0.5.0) — dialogue-driven skill producing a Test Spec: what must be tested to trust a build; slice mode per increment, sweep mode per version; ratifies via `/ratify` |
-| `/ratify` | **Available** (v0.4.0) — **external dependency: lives in [chzylee/skill-library](https://github.com/chzylee/skill-library), install it (+ `/ratify-configure`) from there.** Cross-stage ratification protocol: prediction-before-reveal at blocking stops, logging `predicted`/`surprised`/`no-opinion` into a measurable ownership record + blind-spot reading list. Also emits a sanitized telemetry corpus (`~/.claude/ship-pipeline/sends.jsonl`) that compounds across builds into presentable proof — see [telemetry schema](https://github.com/chzylee/skill-library/blob/main/ratify/telemetry/README.md). The pipeline invokes it by name at every stop gate |
-| `/finish-build` | **Available** (v0.1.0) — the execution-stage **driver**: drives committed-failing (`xfail`-strict) tests to green through a predict-then-reveal loop, escalating design forks to `/ratify` — in-loop for an increment's reds, canonically for the sweep's parked legs |
-| `/acceptance-gate` | **Available** (v0.1.0) — the **criterion** to `/finish-build`'s driver: administers the gate that decides DONE — runs the mechanical legs (clean-checkout command, failure paths, documented path), presents the evidence and human legs as blocking stops, records the verdict. Never fixes code; never passes a human leg on the human's behalf |
-| `/sidequest` | **Experimental** (v0.1.0) — the ▸ stage's autonomous second method: mines friction, screens with the black-box test (low ownership requirement, not low maintenance), emits launch-ready autonomous build briefs into the Sidequest Projects stockpile. Drafted ahead of first proven run; graduates on the first sourced-and-shipped sidequest |
-| `/build-plan` | Next up — turn a design doc into a Build Plan: shared context + a *recommended* increment ordering with build prompts sized to the owner's verification bandwidth. Advisory by construction: it must be re-runnable against a part-built repo to reconcile the plan to reality, and must never ask the builder to justify a deviation the design already covers |
-| `/build-review`, `/bake-off`, `/current-state` | Being harvested |
-
-## The public page — the ratify proof card
-
-The self-contained static page presenting what `/ratify` is and the ownership data behind it
-**moved with the skill** to skill-library's per-skill Pages site:
-**https://chzylee.github.io/skill-library/ratify/** · source:
-[`docs/ratify/`](https://github.com/chzylee/skill-library/tree/main/docs/ratify) in that repo.
-The old `/record/` URL here redirects.
-
-## Developing this pipeline — dev builds
-
-Work in progress lives on the `dev` branch; `master` is what installs run. A skill under
-development deploys as a separate `<skill>-dev` skill (generated, explicit-invocation-only)
-so it never shadows the stable version — the [dev-build pattern](https://github.com/chzylee/dev-build),
-configured for this repo by `.dev-build.conf`. Cloners are asked to approve one hook:
-[`scripts/dev-build-check.sh`](scripts/dev-build-check.sh), a short read-only script that
-warns at session start (in this repo only) when a deployed dev build is stale. Declining
-costs only the warnings.
-
 ## Install
-
-Two ways to install. The **default gives skills their bare names** (`/own-your-code`) —
-cleaner to use day to day. Plugin mode namespaces them (`/ship-pipeline:own-your-code`) —
-choose it if you prefer skills indexed under the suite's name or want plugin-manager
-updates.
-
-### Default — bare skill names (30-second install)
 
 Paste this into Claude Code:
 
 ```text
-Install ship-pipeline: run
+Install the ship-pipeline skills for me. Clone
   git clone https://github.com/chzylee/ship-pipeline.git ~/repos/ship-pipeline
 (or `git -C ~/repos/ship-pipeline pull` if it already exists), then symlink every
 directory under ~/repos/ship-pipeline/skills/ into ~/.claude/skills/ (macOS/Linux:
@@ -191,21 +220,22 @@ Or do it by hand:
 
 ```bash
 git clone https://github.com/chzylee/ship-pipeline.git ~/repos/ship-pipeline
-for s in ~/repos/ship-pipeline/skills/*/; do
-  ln -sfn "$s" ~/.claude/skills/"$(basename "$s")"
-done
+```
+
+```bash
+for s in ~/repos/ship-pipeline/skills/*/; do ln -sfn "$s" ~/.claude/skills/"$(basename "$s")"; done
 ```
 
 Symlinks mean a `git pull` updates every installed skill in place.
 
 > **Dependency:** `/ratify` and `/ratify-configure` are not in this repo — they live in
-> [chzylee/skill-library](https://github.com/chzylee/skill-library) and the pipeline invokes
-> them by name at its stop gates. Install them from there (one-skill prompt or the
-> `skill-library` plugin — see that repo's README).
+> [chzylee/skill-library](https://github.com/chzylee/skill-library) and the pipeline invokes them by
+> name at its approval stops. Install them from there (one-skill prompt or the `skill-library`
+> plugin — see that repo's README). Without them, approval stops still occur but lose
+> prediction-before-reveal and the ownership record.
 
-**The drift-catch hook (bare-skill installs only — plugin mode loads it automatically).** Add this
-to `~/.claude/settings.json` so the `design-doc impact:` convention is enforced wherever you build
-(replace the path if you cloned elsewhere):
+**The drift-catch hook (bare-skill installs only — plugin mode loads it automatically).** Add this to
+`~/.claude/settings.json` (replace the path if you cloned elsewhere):
 
 ```json
 {
@@ -240,26 +270,37 @@ Or by hand:
 
 ```bash
 claude plugin marketplace add chzylee/ship-pipeline
+```
+
+```bash
 claude plugin install ship-pipeline@ship-pipeline
 ```
 
 ## Update
 
-- **Bare-name install:** `git -C ~/repos/ship-pipeline pull` — symlinked skills update
-  instantly. Or paste: *"Update ship-pipeline: git -C ~/repos/ship-pipeline pull, then tell
-  me what changed."*
-- **Plugin install:** `claude plugin update ship-pipeline` (every push to this repo is a
-  release — versions track commits).
+- **Bare-name install:** `git -C ~/repos/ship-pipeline pull` — symlinked skills update instantly.
+- **Plugin install:** `claude plugin update ship-pipeline` (every push is a release — versions track
+  commits).
 
 ## Uninstall
 
-- **Bare-name install:** remove the symlinks and the clone:
+- **Bare-name install:**
   `for s in ~/repos/ship-pipeline/skills/*/; do rm ~/.claude/skills/"$(basename "$s")"; done && rm -rf ~/repos/ship-pipeline`
 - **Plugin install:** `claude plugin uninstall ship-pipeline`
 
 ## Requirements
 
-Nothing to run: the skills work with a stock Claude Code install, no dependencies or keys.
-Optional: `/own-your-code`'s cross-model onboarding read can use a genuinely
-different-lineage model if a free `OPENROUTER_API_KEY` or `GEMINI_API_KEY` is present in
-`~/.secrets/llm.env` — see [skills/own-your-code/README.md](skills/own-your-code/README.md).
+Nothing to run: the skills work with a stock Claude Code install, no dependencies or keys. Optional:
+`/own-your-code`'s cross-model onboarding read can use a genuinely different-lineage model if a free
+`OPENROUTER_API_KEY` or `GEMINI_API_KEY` is present in `~/.secrets/llm.env` — see
+[skills/own-your-code/README.md](skills/own-your-code/README.md).
+
+## Known limits
+
+- **Responsibility is not reduced.** This process makes the choices visible enough that
+  responsibility is exercisable rather than nominal. It does not transfer any of it.
+- **Declaration completeness is not guaranteed.** An agent that does not recognize a decision will
+  not declare it. S3 and S5-S7 are the nets; increment sizing is what keeps a miss affordable.
+- **Impact is unmodelable.** The system will surface decisions you don't care about and stay quiet
+  about ones you do, whenever the reversal picture and the real stakes diverge.
+- **Every threshold here is a starting cut, not a calibrated one.**

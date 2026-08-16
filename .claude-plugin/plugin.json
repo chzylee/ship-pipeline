@@ -1,7 +1,7 @@
 {
   "name": "ship-pipeline",
   "displayName": "Ship Pipeline",
-  "description": "A guided build pipeline that keeps senior-engineer ownership in LLM-speed development: design doc → build prompt → build review → test spec → acceptance gate → code ownership, every stage verified and documented.",
+  "description": "A spec-driven process for building software with agents. It decides one thing, repeatedly: is this spec specific enough that an agent can execute it without making decisions the owner would have wanted to make? Work goes in increments through seven steps — spec and approve, build with tests first, an independent conformance check, owner review, adversarial spec, drive to green, sign off — or unattended end to end with every decision returned as a proposed design-doc amendment.",
   "author": { "name": "Noah Lee" },
   "homepage": "https://github.com/chzylee/ship-pipeline",
   "repository": "https://github.com/chzylee/ship-pipeline",
